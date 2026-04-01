@@ -37,14 +37,14 @@ Independent modern frontend for OpenSprinkler controllers. The app package name 
 
 ## Environment variables
 
-| Variable | Role |
-|----------|------|
-| `VITE_OPENSPLINKER_BASE_URL` | Client-side API prefix (typically `/api/os` so requests stay same-origin). |
-| `OS_BASE_URL` | OpenSprinkler device base URL (server-side only). |
-| `OS_PORT` | Optional; merged into `OS_BASE_URL` when the URL has no port. |
-| `OS_PASSWORD` **or** `OS_PW_HASH` | Controller authentication (never exposed to the browser). |
-| `HYDRODASH_LOGIN_PASSWORD` | Password for logging into HydroDash itself. |
-| `HYDRODASH_SESSION_SECRET` | Secret for signing the session cookie (use a long random string in production). |
+| Variable                          | Role                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------- |
+| `VITE_OPENSPLINKER_BASE_URL`      | Client-side API prefix (typically `/api/os` so requests stay same-origin).      |
+| `OS_BASE_URL`                     | OpenSprinkler device base URL (server-side only).                               |
+| `OS_PORT`                         | Optional; merged into `OS_BASE_URL` when the URL has no port.                   |
+| `OS_PASSWORD` **or** `OS_PW_HASH` | Controller authentication (never exposed to the browser).                       |
+| `HYDRODASH_LOGIN_PASSWORD`        | Password for logging into HydroDash itself.                                     |
+| `HYDRODASH_SESSION_SECRET`        | Secret for signing the session cookie (use a long random string in production). |
 
 See `.env.example` for placeholders. For multi-site setups, additional server-side options may apply (see `src/server/os.ts`).
 
@@ -97,10 +97,3 @@ docker compose up --build
 Browse **`http://127.0.0.1:8080`**. To expose port 80 on the host, change the nginx ports mapping in `docker-compose.yml` to `"80:80"`.
 
 **TLS:** Terminate HTTPS outside this compose file (e.g. host nginx, Caddy, Traefik, or a cloud load balancer) and proxy HTTP to port 8080, or extend the nginx service with certificates and a `listen 443 ssl` server block.
-
----
-
-## Project notes
-
-- **Lint:** `npm run lint`
-- **Folder name** `opensprinkler-ui` is kept by request; npm/package name remains **hydrodash**.
