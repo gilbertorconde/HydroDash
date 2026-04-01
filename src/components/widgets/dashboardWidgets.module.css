@@ -1,0 +1,272 @@
+.rglTile {
+  position: relative;
+  z-index: 0;
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Card fills the tile and scrolls only in its body */
+.tileCard {
+  height: 100%;
+  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tileCardBody {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* Drag handle: module class for styling; stable global class is set in TS for RGL's handle selector */
+.rglDragHandle {
+  touch-action: none;
+}
+
+:global(.hydrodash-rgl-drag-handle) {
+  touch-action: none;
+}
+
+.dragHandle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.28rem 0.38rem;
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-elevated) 72%, var(--color-surface));
+  color: var(--color-muted);
+  cursor: grab;
+  touch-action: none;
+  flex-shrink: 0;
+}
+
+.dragHandle:hover {
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-muted) 45%, var(--color-border));
+}
+
+.dragHandle:active {
+  cursor: grabbing;
+}
+
+.dragHandle:focus-visible {
+  outline: 2px solid var(--color-accent, var(--color-cta));
+  outline-offset: 2px;
+}
+
+.dragHandleIcon {
+  display: block;
+}
+
+.dragOverlayCard {
+  padding: 0.75rem 1.05rem;
+  min-width: 12rem;
+  max-width: min(22rem, 90vw);
+  border-radius: 12px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow:
+    0 12px 28px color-mix(in srgb, #000 22%, transparent),
+    0 0 0 1px color-mix(in srgb, var(--color-muted) 12%, transparent);
+}
+
+.dragOverlayTitle {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.36rem var(--space-md);
+  margin: 0;
+  font-size: var(--text-body);
+}
+
+.dl dt {
+  color: var(--color-muted);
+  margin: 0;
+  font-weight: 600;
+}
+
+.dl dd {
+  margin: 0;
+  font-weight: 550;
+}
+
+.providerId {
+  color: var(--color-muted);
+  font-weight: 500;
+  font-size: 0.9em;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-lg);
+}
+
+.on {
+  color: var(--color-success);
+}
+
+.off {
+  color: var(--color-muted);
+}
+
+.ok {
+  color: var(--color-success);
+  font-size: var(--text-body);
+  margin: 0 0 var(--space-md);
+  font-weight: 700;
+}
+
+.widgetStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-height: 0;
+}
+
+.widgetMeta {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--color-muted);
+  line-height: 1.35;
+}
+
+.widgetMetaMuted {
+  color: color-mix(in srgb, var(--color-muted) 88%, var(--color-text));
+}
+
+.widgetEmpty {
+  margin: 0;
+  font-size: var(--text-body);
+  color: var(--color-muted);
+  line-height: 1.4;
+}
+
+.widgetError {
+  margin: 0;
+  font-size: var(--text-body);
+  color: var(--color-danger, #c43);
+}
+
+.tableWrap {
+  max-height: min(22rem, 52vh);
+  overflow: auto;
+  margin: 0 calc(var(--space-sm) * -1);
+  padding: 0 var(--space-sm);
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-elevated) 40%, transparent);
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.dataTable th,
+.dataTable td {
+  padding: 0.45rem 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
+  vertical-align: top;
+}
+
+.dataTable th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  font-weight: 700;
+  color: var(--color-muted);
+  background: color-mix(in srgb, var(--color-elevated) 85%, var(--color-surface));
+  box-shadow: 0 1px 0 var(--color-border);
+}
+
+.dataTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.cellTime {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.cellStation {
+  word-break: break-word;
+}
+
+.widgetLink {
+  align-self: flex-start;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-cta, var(--color-accent));
+  text-decoration: none;
+}
+
+.widgetLink:hover {
+  text-decoration: underline;
+}
+
+.runList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: min(20rem, 48vh);
+  overflow: auto;
+}
+
+.runRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-elevated) 35%, transparent);
+}
+
+.runRowText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.runName {
+  font-weight: 650;
+  font-size: var(--text-body);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runZones {
+  font-size: 0.82rem;
+  color: var(--color-muted);
+}
+
+.runBtn {
+  flex-shrink: 0;
+}

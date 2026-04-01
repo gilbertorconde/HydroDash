@@ -1,0 +1,93 @@
+.title {
+  font-size: var(--text-title);
+  margin: 0 0 var(--space-sm);
+  font-weight: 800;
+}
+
+.lead {
+  margin: 0 0 var(--space-lg);
+  color: var(--color-muted);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  max-width: 40rem;
+}
+
+.ok {
+  color: var(--color-success);
+  font-weight: 700;
+  margin-bottom: var(--space-md);
+}
+
+.dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 10rem) 1fr;
+  gap: var(--space-sm) var(--space-md);
+  font-size: 0.88rem;
+}
+
+.dl dt {
+  margin: 0;
+  color: var(--color-muted);
+  font-weight: 650;
+}
+
+.dl dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+
+.pre {
+  margin: 0;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--color-surface-2) 50%, var(--color-elevated));
+  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
+  max-height: 14rem;
+  overflow: auto;
+}
+
+.field {
+  margin-bottom: var(--space-md);
+  max-width: 24rem;
+}
+
+.select {
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-sm, 8px);
+  border: 1px solid var(--color-border);
+  background: var(--color-elevated);
+  color: var(--color-text);
+  font-size: 0.9rem;
+}
+
+.hint {
+  margin: var(--space-md) 0 0;
+  font-size: var(--text-small);
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+
+.hintInline {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: var(--text-small);
+  color: var(--color-muted);
+  line-height: 1.45;
+  font-weight: 400;
+}
+
+.errLabel {
+  font-weight: 650;
+  color: var(--color-text);
+}

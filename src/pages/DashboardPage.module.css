@@ -1,0 +1,39 @@
+.hero {
+  margin-bottom: var(--space-lg);
+}
+
+.title {
+  font-size: var(--text-title);
+  margin: 0 0 var(--space-sm);
+  font-weight: 800;
+  line-height: var(--lh-tight);
+  letter-spacing: -0.022em;
+}
+
+.lead {
+  margin: 0;
+  max-width: 42rem;
+  font-size: var(--text-body);
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+
+/* react-grid-layout: measured wrapper + tile fills cell */
+.rglMeasure {
+  width: 100%;
+  min-width: 0;
+}
+
+.rglRoot {
+  width: 100%;
+}
+
+.rglRoot :global(.react-grid-item) {
+  transition: transform 180ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.rglRoot :global(.react-grid-placeholder) {
+  background: color-mix(in srgb, var(--color-accent, var(--color-cta)) 18%, transparent);
+  border-radius: 12px;
+  opacity: 0.85;
+}

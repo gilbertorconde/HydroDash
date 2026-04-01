@@ -1,0 +1,59 @@
+.title {
+  font-size: var(--text-title);
+  margin: 0 0 var(--space-xs);
+  font-weight: 800;
+}
+
+.subtitle {
+  margin: 0 0 var(--space-lg);
+  color: var(--color-muted);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  max-width: 36rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.cardLink {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  height: 100%;
+}
+
+.cardDesc {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--color-muted);
+  font-weight: 550;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 800;
+  margin: 0 0 var(--space-sm);
+}
+
+.longTail {
+  margin: 0;
+  padding-left: 1.15rem;
+  line-height: 1.55;
+  font-size: 0.88rem;
+}
+
+.longTail li {
+  margin: 0.35rem 0;
+}
+
+.longTailNote {
+  margin: var(--space-md) 0 0;
+  font-size: 0.82rem;
+  color: var(--color-muted);
+  line-height: 1.45;
+}

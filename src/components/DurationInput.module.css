@@ -1,0 +1,45 @@
+.wrap {
+  display: grid;
+  gap: var(--space-2xs);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(60px, 76px));
+  gap: var(--space-xs);
+}
+
+.cell {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.cellLabel {
+  font-size: var(--text-small);
+  color: var(--color-muted);
+  margin: 0;
+  font-weight: 600;
+}
+
+.value {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 2rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-surface) 45%, var(--color-elevated));
+  color: var(--color-text);
+  font-size: 0.9rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.value:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--color-accent) 68%, var(--color-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
+  background: var(--color-surface);
+}

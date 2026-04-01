@@ -1,0 +1,25 @@
+.title {
+  font-size: var(--text-title);
+  margin: 0 0 var(--space-sm);
+  font-weight: 800;
+}
+
+.lead {
+  margin: 0 0 var(--space-lg);
+  color: var(--color-muted);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  max-width: 40rem;
+}
+
+.pre {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-surface-2) 50%, var(--color-elevated));
+  border: 1px solid color-mix(in srgb, var(--color-border) 78%, transparent);
+  max-height: min(70vh, 36rem);
+  overflow: auto;
+}

@@ -1,0 +1,20 @@
+services:
+  hydrodash:
+    build: .
+    env_file: .env
+    expose:
+      - "4173"
+    environment:
+      NODE_ENV: production
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      # Host 8080 → nginx 80 → app 4173 (change to "80:80" if you want HydroDash on port 80)
+      - "8080:80"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - hydrodash
+    restart: unless-stopped

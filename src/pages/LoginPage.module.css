@@ -1,0 +1,40 @@
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  background: var(--color-bg);
+}
+
+.brandBlock {
+  display: flex;
+  justify-content: center;
+}
+
+.brandLogo {
+  height: 4.5rem;
+  width: auto;
+  max-width: min(18rem, 85vw);
+  object-fit: contain;
+}
+
+.hint {
+  font-size: 0.88rem;
+  color: var(--color-muted);
+  margin: 0 0 0.75rem;
+}
+
+.hint code {
+  font-size: 0.82rem;
+  word-break: break-all;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 22rem;
+}
