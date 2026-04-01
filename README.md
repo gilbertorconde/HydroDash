@@ -9,6 +9,34 @@ Independent modern frontend for OpenSprinkler controllers. The app package name 
 
 ---
 
+## Screenshots
+
+### Login
+
+![HydroDash login screen](docs/screenshot-login.png)
+
+### Home
+
+![HydroDash home dashboard with draggable cards](docs/screenshot-home.png)
+
+### Zones
+
+![HydroDash zones — manual runs per zone](docs/screenshot-zones.png)
+
+### Programs
+
+![HydroDash programs list](docs/screenshot-programs.png)
+
+### History (timeline)
+
+![HydroDash irrigation history timeline](docs/screenshot-history.png)
+
+### Program editor
+
+![Edit program modal](docs/screenshot-program-edit.png)
+
+---
+
 ## Requirements
 
 - **Node.js** 20+ (TanStack Start / Vite 8 recommend **22.12+**)
