@@ -215,7 +215,7 @@ export function SettingsPage() {
   const hydratedOnce = useRef(false)
 
   const opts = ja.data?.options ?? {}
-  const st = ja.data?.settings ?? {}
+  const st = useMemo(() => ja.data?.settings ?? {}, [ja.data?.settings])
   const snames = (ja.data?.stations?.snames ?? []) as string[]
   const hasIfe2 = opts.ife2 !== undefined && opts.ife2 !== null
   const mexp = typeof opts.mexp === 'number' ? opts.mexp : 5
@@ -334,8 +334,11 @@ export function SettingsPage() {
 
   useEffect(() => {
     if (!ja.isSuccess || !ja.data || hydratedOnce.current) return
-    hydrateFrom(ja.data)
-    hydratedOnce.current = true
+    const data = ja.data
+    queueMicrotask(() => {
+      hydrateFrom(data)
+      hydratedOnce.current = true
+    })
   }, [ja.isSuccess, ja.data, hydrateFrom])
 
   async function reloadFromDevice() {

@@ -6,7 +6,8 @@ export const Route = createFileRoute('/api/auth/logout')({
   server: {
     handlers: {
       POST: async () => {
-        const { password: _password, ...clearableConfig } = getSessionConfig()
+        const { password: _unusedPassword, ...clearableConfig } = getSessionConfig()
+        void _unusedPassword
         await clearSession(clearableConfig)
         return Response.json({ ok: true })
       },

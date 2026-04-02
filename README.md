@@ -3,7 +3,7 @@
   HydroDash
 </h1>
 
-Independent modern frontend for OpenSprinkler controllers. The app package name is **hydrodash**; the repo folder stays `opensprinkler-ui` by convention.
+Independent modern frontend for OpenSprinkler controllers. The npm package name in `package.json` is **hydrodash**; a default `git clone` of this repo creates a **HydroDash** directory.
 
 **Stack:** [TanStack Start](https://tanstack.com/start) (Vite + SSR), React 19, React Query, file-based routing. OpenSprinkler API access goes through server routes under `/api/os/*`; browser login uses cookie sessions (`/api/auth/*`).
 
@@ -34,6 +34,18 @@ Independent modern frontend for OpenSprinkler controllers. The app package name 
 ### Program editor
 
 ![Edit program modal](docs/screenshot-program-edit.png)
+
+---
+
+## Contributing
+
+### Dashboard widgets
+
+To add a draggable tile on **Home**, follow **[Contributing dashboard widgets](docs/contributing-widgets.md)** (fork/branch, file checklist, data hooks, and PR expectations).
+
+### Product roadmap (More page)
+
+The **More** screen lists features not implemented yet. **[Roadmap requirements](docs/roadmap-requirements.md)** breaks each item into goals, gaps, API/UX notes, and draft acceptance criteria for planning and contributions.
 
 ---
 

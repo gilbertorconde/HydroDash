@@ -34,7 +34,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.28rem 0.38rem;
+  box-sizing: border-box;
+  height: var(--dashboard-tile-control-h);
+  min-height: var(--dashboard-tile-control-h);
+  padding: 0 0.38rem;
   margin: 0;
   border: 1px solid var(--color-border);
   border-radius: 8px;
@@ -61,6 +64,91 @@
 
 .dragHandleIcon {
   display: block;
+}
+
+.tileTitleActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+  /* Shared with drag grip, cog, OK (18px icon + former vertical padding + borders) */
+  --dashboard-tile-control-h: calc(18px + 0.56rem + 2px);
+}
+
+.tileHeightCog {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: var(--dashboard-tile-control-h);
+  min-height: var(--dashboard-tile-control-h);
+  padding: 0 0.38rem;
+  margin: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--color-elevated) 72%, var(--color-surface));
+  color: var(--color-muted);
+  cursor: pointer;
+  line-height: 0;
+  flex-shrink: 0;
+}
+
+.tileHeightCogIcon {
+  display: block;
+}
+
+.tileHeightCog:hover {
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-muted) 45%, var(--color-border));
+}
+
+.tileHeightCog:focus-visible {
+  outline: 2px solid var(--color-accent, var(--color-cta));
+  outline-offset: 2px;
+}
+
+.tileHeightEdit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.tileHeightInput {
+  box-sizing: border-box;
+  width: 3.5rem;
+  height: var(--dashboard-tile-control-h);
+  min-height: var(--dashboard-tile-control-h);
+  padding: 0 0.28rem;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.tileHeightOk {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: var(--dashboard-tile-control-h);
+  min-height: var(--dashboard-tile-control-h);
+  padding: 0 0.42rem;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1;
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-elevated) 78%, var(--color-surface));
+  color: var(--color-text);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.tileHeightOk:hover {
+  border-color: color-mix(in srgb, var(--color-muted) 40%, var(--color-border));
 }
 
 .dragOverlayCard {
@@ -269,4 +357,8 @@
 
 .runBtn {
   flex-shrink: 0;
+}
+
+.runBtnStarting {
+  min-width: 7.25rem;
 }

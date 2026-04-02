@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useController, useChangeOptions } from '../api/hooks'
 import {
   WEATHER_PROVIDERS,
@@ -61,24 +61,14 @@ export function ForecastPage() {
   const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
-  // `wto` lives on `/jc` (controller), not on `/jo` (options) — same as OpenSprinkler-App `controller.settings.wto`.
-  const wtoSnapshot = useMemo(() => {
-    const raw = jc.data?.wto
-    if (raw == null) return ''
-    if (typeof raw === 'string') return raw
-    try {
-      return JSON.stringify(raw)
-    } catch {
-      return ''
-    }
-  }, [jc.data?.wto])
-
   useEffect(() => {
     if (!jc.isSuccess) return
     const w = wtoRecord(jc.data?.wto)
-    setProvider(normalizeWeatherProviderId(w.provider))
-    setApiKey(typeof w.key === 'string' ? w.key : '')
-  }, [jc.isSuccess, wtoSnapshot])
+    queueMicrotask(() => {
+      setProvider(normalizeWeatherProviderId(w.provider))
+      setApiKey(typeof w.key === 'string' ? w.key : '')
+    })
+  }, [jc.isSuccess, jc.data?.wto])
 
   const sel = providerById(provider)
   const needsKey = sel?.needsKey ?? false

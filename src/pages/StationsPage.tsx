@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   useStationsMeta,
   useStationStatus,
@@ -12,6 +12,7 @@ import {
 import { getStationAttrLabels, jeEntryForSid } from '../lib/stationAttrs'
 import { Card, Button, Input, Label, Spinner, ErrorBox } from '../components/ui'
 import { DurationInput } from '../components/DurationInput'
+import { CONTROLLER_ACTION_UI_TIMEOUT_MS } from '../lib/opensprinklerRuntime'
 import { isStationDisabled } from '../lib/stationDis'
 import { useAppPreferences } from '../lib/appPreferences'
 import { CircleDot, Clock3, ListOrdered, Play, PlayCircle, Timer } from 'lucide-react'
@@ -50,10 +51,20 @@ export function StationsPage() {
   const changeStations = useChangeStations()
   const pauseQueue = usePauseQueue()
 
-  const snames = (jn.data?.snames as string[] | undefined) ?? []
-  const stnGrp = (jn.data?.stn_grp as number[] | undefined) ?? []
-  const stnDis = (jn.data?.stn_dis as number[] | undefined) ?? []
-  const sn = js.data?.sn ?? []
+  const snArr = useMemo(() => js.data?.sn ?? [], [js.data?.sn])
+  const snames = useMemo(
+    () => (jn.data?.snames as string[] | undefined) ?? [],
+    [jn.data?.snames],
+  )
+  const stnGrp = useMemo(
+    () => (jn.data?.stn_grp as number[] | undefined) ?? [],
+    [jn.data?.stn_grp],
+  )
+  const stnDis = useMemo(
+    () => (jn.data?.stn_dis as number[] | undefined) ?? [],
+    [jn.data?.stn_dis],
+  )
+  const sn = snArr
   const n = Math.max(snames.length, sn.length, jc.data?.nbrd ? jc.data.nbrd * 8 : 0)
   const appPrefs = useAppPreferences()
 
@@ -107,6 +118,32 @@ export function StationsPage() {
   const [nameEdits, setNameEdits] = useState<Record<number, string>>({})
   const [actionMsg, setActionMsg] = useState<string | null>(null)
   const [actionErr, setActionErr] = useState<string | null>(null)
+  const [startingSid, setStartingSid] = useState<number | null>(null)
+  const zoneStartWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (startingSid === null) return
+    if (snArr[startingSid] !== 1) return
+    if (zoneStartWatchdogRef.current) {
+      clearTimeout(zoneStartWatchdogRef.current)
+      zoneStartWatchdogRef.current = null
+    }
+    queueMicrotask(() => setStartingSid(null))
+  }, [startingSid, snArr])
+
+  useEffect(() => {
+    if (startingSid === null) return
+    zoneStartWatchdogRef.current = setTimeout(() => {
+      zoneStartWatchdogRef.current = null
+      setStartingSid(null)
+    }, CONTROLLER_ACTION_UI_TIMEOUT_MS)
+    return () => {
+      if (zoneStartWatchdogRef.current) {
+        clearTimeout(zoneStartWatchdogRef.current)
+        zoneStartWatchdogRef.current = null
+      }
+    }
+  }, [startingSid])
 
   const err = jn.error ?? js.error ?? ja.error ?? je.error
   const errMsg = err instanceof Error ? err.message : null
@@ -167,6 +204,9 @@ export function StationsPage() {
           const attr = stationsBlock ? getStationAttrLabels(sid, stationsBlock) : null
           const jeRow = je.data ? jeEntryForSid(je.data, sid) : null
           const on = sn[sid] === 1
+          const startingThisZone = startingSid === sid && !on
+          const zoneStartBlocked =
+            manual.isPending || (startingSid !== null && !on)
           const ps = jc.data?.ps as [number, number, number, number][] | undefined
           const psRow = ps?.[sid]
           const queued = psRow && psRow[0] !== 0 && !on
@@ -320,22 +360,33 @@ export function StationsPage() {
                     {!on ? (
                       <Button
                         className={styles.zoneRunPrimary}
-                        disabled={manual.isPending || disabled}
-                        startIcon={<Play size={18} strokeWidth={2.25} aria-hidden />}
+                        disabled={disabled || zoneStartBlocked}
+                        aria-busy={startingThisZone}
+                        startIcon={
+                          startingThisZone ? (
+                            <Spinner />
+                          ) : (
+                            <Play size={18} strokeWidth={2.25} aria-hidden />
+                          )
+                        }
                         onClick={() =>
-                          runAction(
-                            () =>
-                              manual.mutateAsync({
+                          runAction(async () => {
+                            setStartingSid(sid)
+                            try {
+                              await manual.mutateAsync({
                                 sid,
                                 en: 1,
                                 t: durFor(sid),
                                 qo: 0,
-                              }),
-                            `Zone ${sid + 1} started.`,
-                          )
+                              })
+                            } catch (e) {
+                              setStartingSid(null)
+                              throw e
+                            }
+                          }, `Zone ${sid + 1} started.`)
                         }
                       >
-                        Start watering
+                        {startingThisZone ? 'Starting…' : 'Start watering'}
                       </Button>
                     ) : (
                       <Button
@@ -369,7 +420,7 @@ export function StationsPage() {
               {attr ? (
                 <details className={styles.stationAdv}>
                   <summary className={styles.stationAdvSummary}>
-                    Station attributes (master, rain, sequential, /je)
+                    Station attributes (master, rain, sequential)
                   </summary>
                   <div className={styles.stationAdvBody}>
                     <ul className={styles.attrChipList} aria-label="Station attribute flags from controller">

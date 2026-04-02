@@ -1,9 +1,11 @@
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type Dispatch,
   type SetStateAction,
 } from 'react'
@@ -41,8 +43,11 @@ import {
   useProgramUwt,
   useDeleteProgram,
   useReorderPrograms,
+  useController,
+  useManualStation,
   useRunProgram,
   useRunOnce,
+  useStationStatus,
 } from '../api/hooks'
 import {
   cloneProgram,
@@ -79,6 +84,13 @@ import {
   parseMmDdToOsDate,
   unpackEpochDay16,
 } from '../lib/osDate'
+import {
+  CONTROLLER_ACTION_UI_TIMEOUT_MS,
+  isProgramActiveOnController,
+  readQuickRunManualPid,
+  stationMatchesProgramRuntime,
+  writeQuickRunManualPid,
+} from '../lib/opensprinklerRuntime'
 import { isStationDisabled } from '../lib/stationDis'
 import { useAppPreferences } from '../lib/appPreferences'
 import { Card, Button, ErrorBox, Spinner, Label, Input } from '../components/ui'
@@ -272,7 +284,7 @@ function createEditorState(program: ProgramRow | null, pid: number, nSta: number
   const dayType = getProgramDayType(flag)
   const fixed = flagFixedStart(flag)
 
-  let weekdays = parseWeeklyDays(days0)
+  const weekdays = parseWeeklyDays(days0)
   let intervalEvery = 3
   let intervalStarting = 0
   let singleEpochDay = base.singleEpochDay
@@ -490,6 +502,10 @@ function SortableProgramRow({
   del,
   runAction,
   onRunNow,
+  onProgramStop,
+  programRunning,
+  runNowBlocked,
+  stopProgramStationsPending,
   stationOrder,
   showStationNum,
 }: {
@@ -506,6 +522,10 @@ function SortableProgramRow({
   del: ReturnType<typeof useDeleteProgram>
   runAction: (task: () => Promise<unknown>, successMessage: string) => Promise<void>
   onRunNow: (pid: number) => void
+  onProgramStop: (pid: number) => void
+  programRunning: boolean
+  runNowBlocked: boolean
+  stopProgramStationsPending: boolean
   stationOrder: number[]
   showStationNum: boolean
 }) {
@@ -546,6 +566,19 @@ function SortableProgramRow({
         bodyClassName={en ? undefined : styles.programCardMuted}
         titleAction={
           <div className={styles.programCardHeaderActions}>
+            <Button
+              variant={en ? 'danger' : 'cta'}
+              className={styles.cardHeaderToggle}
+              disabled={toggleEn.isPending}
+              onClick={() =>
+                runAction(
+                  () => toggleEn.mutateAsync({ pid, en: en ? 0 : 1 }),
+                  en ? 'Program disabled.' : 'Program enabled.',
+                )
+              }
+            >
+              {en ? 'Turn off' : 'Turn on'}
+            </Button>
             <button
               type="button"
               ref={setActivatorNodeRef}
@@ -569,19 +602,6 @@ function SortableProgramRow({
                 <circle cx="10" cy="14" r="1.75" fill="currentColor" />
               </svg>
             </button>
-            <Button
-              variant={en ? 'danger' : 'cta'}
-              className={styles.cardHeaderToggle}
-              disabled={toggleEn.isPending}
-              onClick={() =>
-                runAction(
-                  () => toggleEn.mutateAsync({ pid, en: en ? 0 : 1 }),
-                  en ? 'Program disabled.' : 'Program enabled.',
-                )
-              }
-            >
-              {en ? 'Turn off' : 'Turn on'}
-            </Button>
           </div>
         }
       >
@@ -724,9 +744,19 @@ function SortableProgramRow({
           >
             Duplicate as new
           </Button>
-          <Button variant="secondary" onClick={() => onRunNow(pid)}>
-            Run now
-          </Button>
+          {programRunning ? (
+            <Button
+              variant="danger"
+              disabled={stopProgramStationsPending}
+              onClick={() => onProgramStop(pid)}
+            >
+              Stop
+            </Button>
+          ) : (
+            <Button variant="secondary" disabled={runNowBlocked} onClick={() => onRunNow(pid)}>
+              Run now
+            </Button>
+          )}
           <Button variant="secondary" onClick={() => setEditor(createEditorState(prog, pid, nSta))}>
             Edit
           </Button>
@@ -759,11 +789,23 @@ export function ProgramsPage() {
   const mp = useRunProgram()
   const cr = useRunOnce()
   const save = useSaveProgram()
+  const jc = useController(5000)
+  const js = useStationStatus(4000)
+  const manualStation = useManualStation()
   const prefs = useAppPreferences()
 
-  const pd = (pr.data?.pd as ProgramRow[] | undefined) ?? []
-  const stationNames = (jn.data?.snames as string[] | undefined) ?? []
-  const stnDis = jn.data?.stn_dis as number[] | undefined
+  const pd = useMemo(
+    () => (pr.data?.pd as ProgramRow[] | undefined) ?? [],
+    [pr.data?.pd],
+  )
+  const stationNames = useMemo(
+    () => (jn.data?.snames as string[] | undefined) ?? [],
+    [jn.data?.snames],
+  )
+  const stnDis = useMemo(
+    () => jn.data?.stn_dis as number[] | undefined,
+    [jn.data?.stn_dis],
+  )
   const nSta =
     stationNames.length ||
     pd[0]?.[4]?.length ||
@@ -783,26 +825,93 @@ export function ProgramsPage() {
   const [runOnceQo, setRunOnceQo] = useState(2)
   const [runOnceUwt, setRunOnceUwt] = useState(0)
   const [runProgramPid, setRunProgramPid] = useState<number | null>(null)
+  const [startingProgramPid, setStartingProgramPid] = useState<number | null>(null)
+  const progStartWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [manualQuickRunPid, setManualQuickRunPid] = useState<number | null>(() => readQuickRunManualPid())
   const [runProgQo, setRunProgQo] = useState(2)
   const [runProgUwt, setRunProgUwt] = useState<0 | 1>(1)
   const [editor, setEditor] = useState<ProgramEditorState | null>(null)
   const restrictDetailsRef = useRef<HTMLDetailsElement>(null)
   const addlDetailsRef = useRef<HTMLDetailsElement>(null)
-  const [editorPortalReady, setEditorPortalReady] = useState(false)
+  /** Avoid `createPortal` during SSR; no setState-in-effect (see react-hooks/set-state-in-effect). */
+  const editorPortalReady = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
   const [runDurs, setRunDurs] = useState<number[]>([])
   const [actionMsg, setActionMsg] = useState<string | null>(null)
   const [actionErr, setActionErr] = useState<string | null>(null)
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
+
+  const runningProgramPids = useMemo(() => {
+    const ps = jc.data?.ps as [number, number, number, number][] | undefined
+    const sn = js.data?.sn ?? []
+    const next = new Set<number>()
+    for (let pid = 0; pid < pd.length; pid++) {
+      if (isProgramActiveOnController(pid, pd, ps, sn, nSta, manualQuickRunPid)) next.add(pid)
+    }
+    return next
+  }, [pd, jc.data?.ps, js.data?.sn, nSta, manualQuickRunPid])
+
+  const stopProgramStations = useCallback(
+    async (pid: number) => {
+      const prog = pd[pid]
+      if (!prog) return
+      const ps = jc.data?.ps as [number, number, number, number][] | undefined
+      const sn = js.data?.sn ?? []
+      const tasks: Promise<unknown>[] = []
+      for (let sid = 0; sid < nSta; sid++) {
+        if (!stationMatchesProgramRuntime(pid, sid, pd, ps, sn, manualQuickRunPid)) continue
+        tasks.push(manualStation.mutateAsync({ sid, en: 0 }))
+      }
+      await Promise.all(tasks)
+      setManualQuickRunPid((m) => {
+        if (m !== pid) return m
+        writeQuickRunManualPid(null)
+        return null
+      })
+    },
+    [pd, jc.data?.ps, js.data?.sn, nSta, manualStation, manualQuickRunPid],
+  )
+
+  useEffect(() => {
+    if (startingProgramPid === null) return
+    const ps = jc.data?.ps as [number, number, number, number][] | undefined
+    const sn = js.data?.sn ?? []
+    if (!isProgramActiveOnController(startingProgramPid, pd, ps, sn, nSta, manualQuickRunPid)) return
+    if (progStartWatchdogRef.current) {
+      clearTimeout(progStartWatchdogRef.current)
+      progStartWatchdogRef.current = null
+    }
+    queueMicrotask(() => {
+      setStartingProgramPid(null)
+      setRunProgramPid(null)
+    })
+  }, [startingProgramPid, jc.data?.ps, js.data?.sn, pd, nSta, manualQuickRunPid])
+
+  useEffect(() => {
+    if (startingProgramPid === null) return
+    progStartWatchdogRef.current = setTimeout(() => {
+      progStartWatchdogRef.current = null
+      setStartingProgramPid(null)
+      setRunProgramPid(null)
+      setActionMsg(null)
+      setActionErr('Timed out waiting for the controller to report this program as running.')
+    }, CONTROLLER_ACTION_UI_TIMEOUT_MS)
+    return () => {
+      if (progStartWatchdogRef.current) {
+        clearTimeout(progStartWatchdogRef.current)
+        progStartWatchdogRef.current = null
+      }
+    }
+  }, [startingProgramPid])
 
   const sortableIds = useMemo(() => pd.map((_, i) => String(i)), [pd])
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
-
-  useEffect(() => {
-    setEditorPortalReady(true)
-  }, [])
 
   useEffect(() => {
     if (!editor) return
@@ -818,11 +927,12 @@ export function ProgramsPage() {
     }
   }, [editor])
 
+  // Sync <details open> from editor without listing full `editor` (avoids collapsing panels on every keystroke).
   useLayoutEffect(() => {
     if (!editor) return
     const el = restrictDetailsRef.current
     if (el) el.open = editor.restriction !== 'none'
-  }, [editor?.pid, editor?.restriction])
+  }, [editor?.pid, editor?.restriction]) // eslint-disable-line react-hooks/exhaustive-deps -- omit full `editor` to avoid collapsing <details> on every field change
 
   const addlSlotsKey = editor?.fixedSlotOn.map((v) => (v ? '1' : '0')).join('') ?? ''
 
@@ -835,7 +945,7 @@ export function ProgramsPage() {
         editor.repeatCount > 0 ||
         editor.fixedSlotOn.some(Boolean)
     }
-  }, [editor?.pid, editor?.startMode, editor?.repeatCount, addlSlotsKey])
+  }, [editor?.pid, editor?.startMode, editor?.repeatCount, addlSlotsKey]) // eslint-disable-line react-hooks/exhaustive-deps -- omit full `editor` to avoid collapsing <details> on every field change
 
   const normalizedRunDurs = useMemo(
     () => Array.from({ length: nSta }, (_, i) => runDurs[i] ?? 0),
@@ -979,6 +1089,11 @@ export function ProgramsPage() {
     setEditor((s) => (s ? { ...s, dayType: next } : s))
   }
 
+  const runModalStarting =
+    runProgramPid !== null &&
+    startingProgramPid === runProgramPid &&
+    !runningProgramPids.has(runProgramPid)
+
   return (
     <div>
       <h1 className={styles.title}>Programs</h1>
@@ -1008,7 +1123,7 @@ export function ProgramsPage() {
       {runProgramPid != null ? (
         <Card title={`Run program #${runProgramPid + 1}`}>
           <p className={styles.hint}>Choose queue behavior and whether to apply weather adjustment.</p>
-          <fieldset className={styles.qoFieldset}>
+          <fieldset className={styles.qoFieldset} disabled={runModalStarting}>
             <legend className={styles.qoLegend}>Queue</legend>
             <label className={styles.qoLabel}>
               <input
@@ -1041,6 +1156,7 @@ export function ProgramsPage() {
           <label className={styles.qoCheck}>
             <input
               type="checkbox"
+              disabled={runModalStarting}
               checked={runProgUwt === 1}
               onChange={(e) => setRunProgUwt(e.target.checked ? 1 : 0)}
             />
@@ -1048,20 +1164,28 @@ export function ProgramsPage() {
           </label>
           <div className={styles.row}>
             <Button
-              disabled={mp.isPending}
-              onClick={async () => {
+              disabled={mp.isPending || runModalStarting}
+              aria-busy={runModalStarting}
+              startIcon={runModalStarting ? <Spinner /> : undefined}
+              onClick={() => {
                 const pid = runProgramPid
                 if (pid == null) return
-                await runAction(
-                  () => mp.mutateAsync({ pid, uwt: runProgUwt, qo: runProgQo }),
-                  'Program started.',
-                )
-                setRunProgramPid(null)
+                void runAction(async () => {
+                  setStartingProgramPid(pid)
+                  try {
+                    await mp.mutateAsync({ pid, uwt: runProgUwt, qo: runProgQo })
+                    setManualQuickRunPid(pid)
+                    writeQuickRunManualPid(pid)
+                  } catch (e) {
+                    setStartingProgramPid(null)
+                    throw e
+                  }
+                }, 'Program started.')
               }}
             >
-              Start program
+              {runModalStarting ? 'Starting…' : 'Start program'}
             </Button>
-            <Button variant="ghost" onClick={() => setRunProgramPid(null)}>
+            <Button variant="ghost" disabled={runModalStarting} onClick={() => setRunProgramPid(null)}>
               Cancel
             </Button>
           </div>
@@ -1830,6 +1954,14 @@ export function ProgramsPage() {
                 runAction={runAction}
                 stationOrder={stationOrder}
                 showStationNum={prefs.showStationNum}
+                programRunning={runningProgramPids.has(pid)}
+                runNowBlocked={startingProgramPid !== null}
+                stopProgramStationsPending={manualStation.isPending}
+                onProgramStop={(p) => {
+                  const row = pd[p]
+                  const label = row?.[5]?.trim() ? String(row[5]) : `Program ${p + 1}`
+                  void runAction(() => stopProgramStations(p), `Program “${label}” stopped.`)
+                }}
                 onRunNow={(pid) => {
                   const row = pd[pid]
                   const uwt = row ? (flagUseWeather(row[0]) ? 1 : 0) : 1

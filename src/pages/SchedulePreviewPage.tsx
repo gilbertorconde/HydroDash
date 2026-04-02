@@ -18,7 +18,10 @@ export function SchedulePreviewPage() {
   const prefs = useAppPreferences()
   const [iso, setIso] = useState(() => new Date().toISOString().slice(0, 10))
 
-  const pd = (pr.data?.pd as ProgramRow[] | undefined) ?? []
+  const pd = useMemo(
+    () => (pr.data?.pd as ProgramRow[] | undefined) ?? [],
+    [pr.data?.pd],
+  )
   const err = pr.error instanceof Error ? pr.error.message : null
 
   const preview = useMemo(() => {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import styles from './DurationInput.module.css'
 
 function clamp(value: number, min: number, max: number): number {
@@ -34,7 +34,9 @@ type DurationInputProps = {
 export function DurationInput({ idBase, valueSeconds, maxSeconds = 64800, onChange }: DurationInputProps) {
   const maxH = Math.floor(maxSeconds / 3600)
   const valueRef = useRef(valueSeconds)
-  valueRef.current = valueSeconds
+  useLayoutEffect(() => {
+    valueRef.current = valueSeconds
+  }, [valueSeconds])
 
   const [fields, setFields] = useState<Fields>(() => {
     const d = splitSeconds(valueSeconds)
@@ -43,11 +45,15 @@ export function DurationInput({ idBase, valueSeconds, maxSeconds = 64800, onChan
 
   useEffect(() => {
     const d = splitSeconds(valueSeconds)
-    setFields({ h: String(d.hours), m: String(d.minutes), s: String(d.seconds) })
+    queueMicrotask(() => {
+      setFields({ h: String(d.hours), m: String(d.minutes), s: String(d.seconds) })
+    })
   }, [valueSeconds])
 
   const fieldsRef = useRef(fields)
-  fieldsRef.current = fields
+  useLayoutEffect(() => {
+    fieldsRef.current = fields
+  }, [fields])
 
   function tryCommit(next: Fields) {
     const h = parseSegment(next.h, maxH)

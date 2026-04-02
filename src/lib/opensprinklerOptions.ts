@@ -127,7 +127,7 @@ function pad2(n: number): string {
 export function timezoneLabelFromTz(tzRaw: unknown): string | null {
   const optTz = typeof tzRaw === 'number' ? tzRaw : Number(tzRaw)
   if (!Number.isFinite(optTz)) return null
-  let tz = optTz - 48
+  const tz = optTz - 48
   const sign = tz >= 0 ? '+' : '-'
   const abs = Math.abs(tz)
   const hh = abs / 4 >> 0
