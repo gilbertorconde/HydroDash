@@ -1,3 +1,4 @@
+import { DEFAULT_VITE_OPENSPLINKER_BASE_URL } from '../lib/envDefaults'
 import { isResultError } from './types'
 
 export class OpenSprinklerHttpError extends Error {
@@ -30,7 +31,7 @@ export class OpenSprinklerApiError extends Error {
 }
 
 export function getBaseUrl(): string {
-  const raw = import.meta.env.VITE_OPENSPLINKLER_BASE_URL || '/api/os'
+  const raw = import.meta.env.VITE_OPENSPLINKLER_BASE_URL || DEFAULT_VITE_OPENSPLINKER_BASE_URL
   return String(raw).replace(/\/$/, '')
 }
 

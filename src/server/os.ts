@@ -84,6 +84,27 @@ export function listOsSitesPublic(): { id: string; label: string }[] {
   return parseOsSites().map((s) => ({ id: s.id, label: s.label || s.id }))
 }
 
+/** All controllers to poll (notification worker). Legacy single-site uses synthetic id `default`. */
+export function listOsSitesForWorker(): { siteId: string; label: string; baseUrl: string; pwHash: string }[] {
+  const sites = parseOsSites()
+  if (sites.length > 0) {
+    return sites.map((s) => ({
+      siteId: s.id,
+      label: s.label || s.id,
+      baseUrl: normalizeBaseUrl(s.baseUrl),
+      pwHash: resolveSitePwHash(s),
+    }))
+  }
+  return [
+    {
+      siteId: 'default',
+      label: 'Controller',
+      baseUrl: normalizeBaseUrl(getRequiredEnv('OS_BASE_URL')),
+      pwHash: computePwHash(),
+    },
+  ]
+}
+
 function resolveSitePwHash(site: OsSiteConfig): string {
   if (site.password?.trim()) {
     return hashPlainPassword(site.password.trim())

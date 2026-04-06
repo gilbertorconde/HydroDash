@@ -6,12 +6,17 @@ import {
 } from '@tanstack/react-query'
 import { osCommand, osFetchDebug, osFetchJson } from './client'
 import type { ControllerState, JsonAll, ProgramRow } from './types'
+import type { NotificationSettingsJson } from '../server/notifications/types'
 import { programToVParam, getProgramRange } from '../lib/programCodec'
 import { normalizeJlPayload } from '../lib/irrigationLog'
 
 export const qk = {
   all: ['hydrodash'] as const,
   auth: () => [...qk.all, 'auth'] as const,
+  notifications: () => [...qk.all, 'notifications'] as const,
+  notificationsConfig: () => [...qk.notifications(), 'config'] as const,
+  notificationsInbox: (limit: number) => [...qk.notifications(), 'inbox', limit] as const,
+  notificationsUnread: () => [...qk.notifications(), 'unread'] as const,
   ja: () => [...qk.all, 'ja'] as const,
   jc: () => [...qk.all, 'jc'] as const,
   jo: () => [...qk.all, 'jo'] as const,
@@ -81,6 +86,106 @@ export function useAuthLogout() {
       if (!res.ok) throw new Error('Logout failed')
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.auth() }),
+  })
+}
+
+export type NotificationsConfigPayload = {
+  enabled: boolean
+  pushEnabled: boolean
+  databaseConfigured?: boolean
+  settings: NotificationSettingsJson | null
+}
+
+export type NotificationInboxItem = {
+  id: string
+  createdAt: string
+  siteId: string | null
+  serviceKey: string
+  title: string
+  body: string
+  route: string
+  readAt: string | null
+}
+
+async function fetchNotificationsConfig(): Promise<NotificationsConfigPayload> {
+  const res = await fetch('/api/notifications/config', { credentials: 'include' })
+  if (!res.ok) throw new Error('Notifications config failed')
+  return (await res.json()) as NotificationsConfigPayload
+}
+
+export function useNotificationsConfig(options?: Partial<UseQueryOptions<NotificationsConfigPayload>>) {
+  return useQuery({
+    queryKey: qk.notificationsConfig(),
+    queryFn: fetchNotificationsConfig,
+    enabled: isBrowser,
+    staleTime: 60_000,
+    ...options,
+  })
+}
+
+export function useNotificationsUnreadCount() {
+  return useQuery({
+    queryKey: qk.notificationsUnread(),
+    queryFn: async () => {
+      const res = await fetch('/api/notifications/unread-count', { credentials: 'include' })
+      if (!res.ok) return { count: 0, enabled: false }
+      return (await res.json()) as { count: number; enabled: boolean }
+    },
+    enabled: isBrowser,
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  })
+}
+
+export function useNotificationsInbox(limit = 50, enabled = true) {
+  return useQuery({
+    queryKey: qk.notificationsInbox(limit),
+    queryFn: async () => {
+      const res = await fetch(`/api/notifications/inbox?limit=${limit}`, { credentials: 'include' })
+      if (!res.ok) throw new Error('Inbox failed')
+      const j = (await res.json()) as { items: NotificationInboxItem[] }
+      return j.items
+    },
+    enabled: isBrowser && enabled,
+  })
+}
+
+export function useNotificationsMarkAllRead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/notifications/mark-all-read', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      })
+      if (!res.ok) throw new Error('Mark read failed')
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.notificationsInbox(50) })
+      qc.invalidateQueries({ queryKey: qk.notificationsInbox(100) })
+      qc.invalidateQueries({ queryKey: qk.notificationsUnread() })
+    },
+  })
+}
+
+export function useNotificationsSaveSettings() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (settings: NotificationSettingsJson) => {
+      const res = await fetch('/api/notifications/settings', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(settings),
+      })
+      const j = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) throw new Error(j.error || 'Save failed')
+      return j as { ok: boolean; settings: NotificationSettingsJson }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.notificationsConfig() })
+    },
   })
 }
 

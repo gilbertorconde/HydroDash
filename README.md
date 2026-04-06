@@ -77,16 +77,7 @@ The **More** screen lists features not implemented yet. **[Roadmap requirements]
 
 ## Environment variables
 
-| Variable                          | Role                                                                            |
-| --------------------------------- | ------------------------------------------------------------------------------- |
-| `VITE_OPENSPLINKER_BASE_URL`      | Client-side API prefix (typically `/api/os` so requests stay same-origin).      |
-| `OS_BASE_URL`                     | OpenSprinkler device base URL (server-side only).                               |
-| `OS_PORT`                         | Optional; merged into `OS_BASE_URL` when the URL has no port.                   |
-| `OS_PASSWORD` **or** `OS_PW_HASH` | Controller authentication (never exposed to the browser).                       |
-| `HYDRODASH_LOGIN_PASSWORD`        | Password for logging into HydroDash itself.                                     |
-| `HYDRODASH_SESSION_SECRET`        | Secret for signing the session cookie (use a long random string in production). |
-
-See `.env.example` for placeholders. For multi-site setups, additional server-side options may apply (see `src/server/os.ts`).
+Every variable is documented in **[docs/environment.md](docs/environment.md)**. **`docker-compose.yml`** only references **`${VAR}`** names (no defaults in YAML); put values in a **`.env`** next to it (see [`.env.example`](.env.example)). Same `.env` works for **`npm run dev`**.
 
 ---
 
@@ -114,26 +105,30 @@ For a quick static check without SSR, `npm run preview` uses the same mechanism 
 From this directory:
 
 ```bash
-docker build -t hydrodash .
+docker build -t hydrodash --build-arg VITE_OPENSPLINKER_BASE_URL=/api/os .
 docker run --rm -p 4173:4173 --env-file .env hydrodash
 ```
 
-Then open `http://127.0.0.1:4173`. Ensure `.env` exists (copy from `.env.example`).
+Then open `http://127.0.0.1:4173`. Ensure `.env` exists (copy from `.env.example`). The build arg matches what CI passes; use another path only if you change the API prefix.
 
 The image runs `npm run start` inside the container. `Dockerfile` uses `npm install` in the build stage for compatibility when the lockfile and `npm ci` disagree; for reproducible CI images, keep `package-lock.json` in sync (`npm install` locally, commit) and switch the build stage to `npm ci` if you prefer.
 
-### Docker Compose: HydroDash + nginx
+### Docker Compose: HydroDash + MariaDB + notifications
 
-[`docker-compose.yml`](docker-compose.yml) runs:
-
-1. **`hydrodash`** — image built from [`Dockerfile`](Dockerfile), port **4173** (not published to the host; internal only).
-2. **`nginx`** — Alpine nginx, publishes **8080 → 80** and reverse-proxies to `hydrodash:4173` using [`docker/nginx.conf`](docker/nginx.conf).
+[`docker-compose.yml`](docker-compose.yml) pulls the **pre-built app image** from **GitHub Container Registry** (CI builds from **[github.com/gilbertorconde/HydroDash](https://github.com/gilbertorconde/HydroDash)**). Environment entries use **`${VAR}`** only; define variables in **`.env`** (or the shell) before `docker compose up`. See [docs/environment.md](docs/environment.md) and [`.env.example`](.env.example).
 
 ```bash
-cp .env.example .env   # edit credentials and secrets
-docker compose up --build
+docker compose up
 ```
 
-Browse **`http://127.0.0.1:8080`**. To expose port 80 on the host, change the nginx ports mapping in `docker-compose.yml` to `"80:80"`.
+**`hydrodash`** and **`hydrodash-notify`** share the same image (`command: node dist/notifications-service.mjs` on notify). **MariaDB** is **`mariadb:11`**. The web UI is exposed as **`8080:4173`**. Notification schema runs on startup using `DATABASE_URL` / `DATABASE_SCHEMA_URL` from your env.
 
-**TLS:** Terminate HTTPS outside this compose file (e.g. host nginx, Caddy, Traefik, or a cloud load balancer) and proxy HTTP to port 8080, or extend the nginx service with certificates and a `listen 443 ssl` server block.
+There is **no reverse proxy** in Compose—use your own TLS/edge proxy in front if you need HTTPS or a single public hostname; see **[Reverse proxy (optional)](docs/environment.md#reverse-proxy-optional)** in `docs/environment.md` and the sample [`docker/nginx.conf`](docker/nginx.conf).
+
+To run **your own build** instead of the published image, use the [single-container](#single-container-node-only) flow, or change the `image:` lines in `docker-compose.yml` (e.g. to a local tag after `docker build -t …`, or another registry if you fork and publish your own package).
+
+### Pre-built image (GitHub Actions → GHCR)
+
+[`.github/workflows/docker-publish.yml`](.github/workflows/docker-publish.yml) builds and pushes **`ghcr.io/gilbertorconde/hydrodash`** (web + notify). Triggers: pushes to `master` / `main`, tags `v*`, pull requests (build only, no push), and **workflow_dispatch**. Tags include branch name, **`latest`** (on default branch), **semver** for `v*` tags, PR refs, and **git SHA**.
+
+HydroDash is **public**; if GitHub creates the package as **private** at first, set **Package settings → Change package visibility → Public** once.

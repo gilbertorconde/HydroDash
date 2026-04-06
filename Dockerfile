@@ -7,6 +7,8 @@ COPY package.json package-lock.json ./
 RUN npm install
 
 COPY . .
+ARG VITE_OPENSPLINKER_BASE_URL
+ENV VITE_OPENSPLINKER_BASE_URL=$VITE_OPENSPLINKER_BASE_URL
 RUN npm run build
 
 FROM node:22-alpine AS runner
@@ -20,3 +22,7 @@ COPY vite.config.ts tsconfig.json tsconfig.node.json tsconfig.app.json ./
 
 EXPOSE 4173
 CMD ["npm", "run", "start"]
+
+# Notification worker: same image, override command to
+#   node dist/notifications-service.mjs
+# (see docker-compose.yml service hydrodash-notify).

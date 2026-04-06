@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useNotificationsConfig } from '../api/hooks'
+import { NotificationsSettingsModal } from '../components/NotificationsSettingsModal'
 import { ProtectedPage } from '../components/ProtectedPage'
 import { Card } from '../components/ui'
 import styles from './MorePage.module.css'
@@ -36,6 +39,9 @@ const links = [
 ] as const
 
 function MoreRoute() {
+  const notifConfig = useNotificationsConfig()
+  const [notifOpen, setNotifOpen] = useState(false)
+
   return (
     <ProtectedPage>
       <div>
@@ -51,7 +57,35 @@ function MoreRoute() {
               </Card>
             </Link>
           ))}
+          {notifConfig.data?.enabled ? (
+            <div
+              className={styles.cardLink}
+              role="button"
+              tabIndex={0}
+              onClick={() => setNotifOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setNotifOpen(true)
+                }
+              }}
+            >
+              <Card title="Push & in-app notifications">
+                <p className={styles.cardDesc}>
+                  ntfy topics, which controller events notify you, and the inbox in the header bell.
+                  {notifConfig.data.pushEnabled ? '' : ' Push is off until NTFY_SERVER_URL is set on the server.'}
+                </p>
+              </Card>
+            </div>
+          ) : null}
         </div>
+
+        {notifOpen ? (
+          <NotificationsSettingsModal
+            onClose={() => setNotifOpen(false)}
+            initial={notifConfig.data?.settings ?? null}
+          />
+        ) : null}
 
         <h2 className={styles.sectionTitle}>Not in HydroDash yet</h2>
         <Card title="Roadmap-style gaps">
@@ -59,7 +93,6 @@ function MoreRoute() {
             <li>Configuration import / export (OpenSprinkler-App parity)</li>
             <li>Firmware OTA checks and update flow</li>
             <li>Analog sensor charts and configuration</li>
-            <li>Notifications panel</li>
             <li>Localization (i18n) and locale files</li>
           </ul>
           <p className={styles.longTailNote}>

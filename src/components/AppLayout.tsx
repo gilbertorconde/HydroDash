@@ -15,6 +15,7 @@ import {
   Droplets,
 } from 'lucide-react'
 import { useAuthLogout } from '../api/hooks'
+import { NotificationsBell } from './NotificationsBell'
 import { Button } from '../components/ui'
 import { useTheme } from '../context/ThemeContext'
 import { HYDRODASH_LOGO_SVG_HEIGHT, HYDRODASH_LOGO_SVG_WIDTH } from '../lib/hydroDashLogo'
@@ -73,6 +74,7 @@ export function AppLayout({ children }: { children?: ReactNode }) {
           ))}
         </nav>
         <div className={styles.headerActions}>
+          <NotificationsBell />
           <button
             type="button"
             className={styles.mobileMenuBtn}

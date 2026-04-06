@@ -25,6 +25,11 @@ import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiOsSplatRouteImport } from './routes/api/os/$'
+import { Route as ApiNotificationsUnreadCountRouteImport } from './routes/api/notifications/unread-count'
+import { Route as ApiNotificationsSettingsRouteImport } from './routes/api/notifications/settings'
+import { Route as ApiNotificationsMarkAllReadRouteImport } from './routes/api/notifications/mark-all-read'
+import { Route as ApiNotificationsInboxRouteImport } from './routes/api/notifications/inbox'
+import { Route as ApiNotificationsConfigRouteImport } from './routes/api/notifications/config'
 import { Route as ApiAuthSiteRouteImport } from './routes/api/auth/site'
 import { Route as ApiAuthSessionRouteImport } from './routes/api/auth/session'
 import { Route as ApiAuthLogoutRouteImport } from './routes/api/auth/logout'
@@ -110,6 +115,34 @@ const ApiOsSplatRoute = ApiOsSplatRouteImport.update({
   path: '/api/os/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiNotificationsUnreadCountRoute =
+  ApiNotificationsUnreadCountRouteImport.update({
+    id: '/api/notifications/unread-count',
+    path: '/api/notifications/unread-count',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiNotificationsSettingsRoute =
+  ApiNotificationsSettingsRouteImport.update({
+    id: '/api/notifications/settings',
+    path: '/api/notifications/settings',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiNotificationsMarkAllReadRoute =
+  ApiNotificationsMarkAllReadRouteImport.update({
+    id: '/api/notifications/mark-all-read',
+    path: '/api/notifications/mark-all-read',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiNotificationsInboxRoute = ApiNotificationsInboxRouteImport.update({
+  id: '/api/notifications/inbox',
+  path: '/api/notifications/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiNotificationsConfigRoute = ApiNotificationsConfigRouteImport.update({
+  id: '/api/notifications/config',
+  path: '/api/notifications/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSiteRoute = ApiAuthSiteRouteImport.update({
   id: '/api/auth/site',
   path: '/api/auth/site',
@@ -151,6 +184,11 @@ export interface FileRoutesByFullPath {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
   '/api/auth/site': typeof ApiAuthSiteRoute
+  '/api/notifications/config': typeof ApiNotificationsConfigRoute
+  '/api/notifications/inbox': typeof ApiNotificationsInboxRoute
+  '/api/notifications/mark-all-read': typeof ApiNotificationsMarkAllReadRoute
+  '/api/notifications/settings': typeof ApiNotificationsSettingsRoute
+  '/api/notifications/unread-count': typeof ApiNotificationsUnreadCountRoute
   '/api/os/$': typeof ApiOsSplatRoute
 }
 export interface FileRoutesByTo {
@@ -173,6 +211,11 @@ export interface FileRoutesByTo {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
   '/api/auth/site': typeof ApiAuthSiteRoute
+  '/api/notifications/config': typeof ApiNotificationsConfigRoute
+  '/api/notifications/inbox': typeof ApiNotificationsInboxRoute
+  '/api/notifications/mark-all-read': typeof ApiNotificationsMarkAllReadRoute
+  '/api/notifications/settings': typeof ApiNotificationsSettingsRoute
+  '/api/notifications/unread-count': typeof ApiNotificationsUnreadCountRoute
   '/api/os/$': typeof ApiOsSplatRoute
 }
 export interface FileRoutesById {
@@ -196,6 +239,11 @@ export interface FileRoutesById {
   '/api/auth/logout': typeof ApiAuthLogoutRoute
   '/api/auth/session': typeof ApiAuthSessionRoute
   '/api/auth/site': typeof ApiAuthSiteRoute
+  '/api/notifications/config': typeof ApiNotificationsConfigRoute
+  '/api/notifications/inbox': typeof ApiNotificationsInboxRoute
+  '/api/notifications/mark-all-read': typeof ApiNotificationsMarkAllReadRoute
+  '/api/notifications/settings': typeof ApiNotificationsSettingsRoute
+  '/api/notifications/unread-count': typeof ApiNotificationsUnreadCountRoute
   '/api/os/$': typeof ApiOsSplatRoute
 }
 export interface FileRouteTypes {
@@ -220,6 +268,11 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/session'
     | '/api/auth/site'
+    | '/api/notifications/config'
+    | '/api/notifications/inbox'
+    | '/api/notifications/mark-all-read'
+    | '/api/notifications/settings'
+    | '/api/notifications/unread-count'
     | '/api/os/$'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -242,6 +295,11 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/session'
     | '/api/auth/site'
+    | '/api/notifications/config'
+    | '/api/notifications/inbox'
+    | '/api/notifications/mark-all-read'
+    | '/api/notifications/settings'
+    | '/api/notifications/unread-count'
     | '/api/os/$'
   id:
     | '__root__'
@@ -264,6 +322,11 @@ export interface FileRouteTypes {
     | '/api/auth/logout'
     | '/api/auth/session'
     | '/api/auth/site'
+    | '/api/notifications/config'
+    | '/api/notifications/inbox'
+    | '/api/notifications/mark-all-read'
+    | '/api/notifications/settings'
+    | '/api/notifications/unread-count'
     | '/api/os/$'
   fileRoutesById: FileRoutesById
 }
@@ -287,6 +350,11 @@ export interface RootRouteChildren {
   ApiAuthLogoutRoute: typeof ApiAuthLogoutRoute
   ApiAuthSessionRoute: typeof ApiAuthSessionRoute
   ApiAuthSiteRoute: typeof ApiAuthSiteRoute
+  ApiNotificationsConfigRoute: typeof ApiNotificationsConfigRoute
+  ApiNotificationsInboxRoute: typeof ApiNotificationsInboxRoute
+  ApiNotificationsMarkAllReadRoute: typeof ApiNotificationsMarkAllReadRoute
+  ApiNotificationsSettingsRoute: typeof ApiNotificationsSettingsRoute
+  ApiNotificationsUnreadCountRoute: typeof ApiNotificationsUnreadCountRoute
   ApiOsSplatRoute: typeof ApiOsSplatRoute
 }
 
@@ -404,6 +472,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOsSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/notifications/unread-count': {
+      id: '/api/notifications/unread-count'
+      path: '/api/notifications/unread-count'
+      fullPath: '/api/notifications/unread-count'
+      preLoaderRoute: typeof ApiNotificationsUnreadCountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/notifications/settings': {
+      id: '/api/notifications/settings'
+      path: '/api/notifications/settings'
+      fullPath: '/api/notifications/settings'
+      preLoaderRoute: typeof ApiNotificationsSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/notifications/mark-all-read': {
+      id: '/api/notifications/mark-all-read'
+      path: '/api/notifications/mark-all-read'
+      fullPath: '/api/notifications/mark-all-read'
+      preLoaderRoute: typeof ApiNotificationsMarkAllReadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/notifications/inbox': {
+      id: '/api/notifications/inbox'
+      path: '/api/notifications/inbox'
+      fullPath: '/api/notifications/inbox'
+      preLoaderRoute: typeof ApiNotificationsInboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/notifications/config': {
+      id: '/api/notifications/config'
+      path: '/api/notifications/config'
+      fullPath: '/api/notifications/config'
+      preLoaderRoute: typeof ApiNotificationsConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/site': {
       id: '/api/auth/site'
       path: '/api/auth/site'
@@ -455,6 +558,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthLogoutRoute: ApiAuthLogoutRoute,
   ApiAuthSessionRoute: ApiAuthSessionRoute,
   ApiAuthSiteRoute: ApiAuthSiteRoute,
+  ApiNotificationsConfigRoute: ApiNotificationsConfigRoute,
+  ApiNotificationsInboxRoute: ApiNotificationsInboxRoute,
+  ApiNotificationsMarkAllReadRoute: ApiNotificationsMarkAllReadRoute,
+  ApiNotificationsSettingsRoute: ApiNotificationsSettingsRoute,
+  ApiNotificationsUnreadCountRoute: ApiNotificationsUnreadCountRoute,
   ApiOsSplatRoute: ApiOsSplatRoute,
 }
 export const routeTree = rootRouteImport
