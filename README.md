@@ -121,7 +121,7 @@ The image runs `npm run start` inside the container. `Dockerfile` uses `npm inst
 docker compose up
 ```
 
-**`hydrodash`** and **`hydrodash-notify`** share the same image (`command: node dist/notifications-service.mjs` on notify). **MariaDB** is **`mariadb:11`**. The web UI is exposed as **`8080:4173`**. Notification schema runs on startup using `DATABASE_URL` / `DATABASE_SCHEMA_URL` from your env.
+**`hydrodash`** and **`hydrodash-notify`** share the same image (`command: node dist/notifications-service.mjs` on notify). **MariaDB** is **`mariadb:11`**. The web UI is exposed as **`8080:4173`**. **`DATABASE_URL`** and **`DATABASE_SCHEMA_URL`** are composed in YAML from **`MARIADB_*`** (no separate `DATABASE_*` keys in `.env` for Compose).
 
 There is **no reverse proxy** in Compose—use your own TLS/edge proxy in front if you need HTTPS or a single public hostname; see **[Reverse proxy (optional)](docs/environment.md#reverse-proxy-optional)** in `docs/environment.md` and the sample [`docker/nginx.conf`](docker/nginx.conf).
 

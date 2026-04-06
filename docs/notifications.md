@@ -10,11 +10,11 @@ HydroDash can record controller events in MariaDB and optionally push them to [n
 
 ## Docker Compose
 
-[`docker-compose.yml`](../docker-compose.yml) passes `DATABASE_URL` and `DATABASE_SCHEMA_URL` as **`${DATABASE_URL}`** / **`${DATABASE_SCHEMA_URL}`**—set them in `.env`. Optional ntfy / worker tuning is in **[docs/environment.md](environment.md)**—add `KEY: ${KEY}` under `environment:` when needed.
+[`docker-compose.yml`](../docker-compose.yml) **builds** `DATABASE_URL` and `DATABASE_SCHEMA_URL` from **`MARIADB_*`** (like Vaultwarden-style compose). Optional ntfy / worker tuning is in **[docs/environment.md](environment.md)**—add `KEY: ${KEY}` under `environment:` when needed.
 
 ## Environment variables
 
-Notification-related variables (`DATABASE_URL`, `DATABASE_SCHEMA_URL`, `NTFY_*`, `NOTIFICATIONS_*`, and OpenSprinkler `OS_*`) are listed in **[docs/environment.md](environment.md)**.
+Notification-related variables (`MARIADB_*`, composed `DATABASE_*` in Compose, `NTFY_*`, `NOTIFICATIONS_*`, and OpenSprinkler `OS_*`) are listed in **[docs/environment.md](environment.md)**.
 
 ## Operations
 
@@ -24,5 +24,5 @@ Notification-related variables (`DATABASE_URL`, `DATABASE_SCHEMA_URL`, `NTFY_*`,
 ## Local development
 
 1. Start only MariaDB: `docker compose up mariadb`
-2. Set `DATABASE_URL` (and optional `DATABASE_SCHEMA_URL`) in `.env` per [docs/environment.md](environment.md).
+2. For Compose, define **`MARIADB_*`** in `.env` only. For app-on-host, set full `DATABASE_URL` in `.env` per [docs/environment.md](environment.md).
 3. Run `npm run dev` for the web app and `npm run notifications-service` (after `npm run build:notify` or full `npm run build`) for the worker. The first request or worker start creates tables if missing.

@@ -16,9 +16,11 @@ Optional tuning variables used only by Node may fall back to defaults **in code*
 
 The **`hydrodash`** service maps **`8080:4173`** (host → container). Edit `ports` if you want another host port.
 
-`hydrodash` and **`hydrodash-notify`** duplicate the same OpenSprinkler and database variables where both need them; the notify service does **not** set `HYDRODASH_LOGIN_PASSWORD` (worker only). There is **no** `env_file:` on services—only **`${VAR}` interpolation** when Compose parses the file.
+`hydrodash` and **`hydrodash-notify`** duplicate the same OpenSprinkler variables where both need them; the notify service does **not** set `HYDRODASH_LOGIN_PASSWORD` (worker only). There is **no** `env_file:` on services—only **`${VAR}` interpolation** when Compose parses the file.
 
-`DATABASE_URL` for Compose should use the hostname **`mariadb`** (the service name), e.g. `mysql://${MARIADB_USER}:${MARIADB_PASSWORD}@mariadb:3306/${MARIADB_DATABASE}`. Align credentials with the `mariadb` service variables.
+**`DATABASE_URL`** and **`DATABASE_SCHEMA_URL`** are **assembled in `docker-compose.yml`** from **`MARIADB_*`** (same pattern as many stacks: app user URL + root URL for DDL). You do **not** set `DATABASE_URL` / `DATABASE_SCHEMA_URL` in `.env` for `docker compose up`. Hostname is **`mariadb`** (Compose service name), port **3306**.
+
+Passwords with **`@`, `:`, `/`, `#`, `%`, etc.** must be **percent-encoded** in URI form; otherwise the connection string is ambiguous—prefer alphanumeric passwords for MariaDB users or encode them.
 
 ---
 
@@ -42,7 +44,7 @@ Referenced in `docker-compose.yml` as **`${MARIADB_ROOT_PASSWORD}`**, **`${MARIA
 
 | Variable | Required | Description |
 | -------- | -------- | ----------- |
-| `MARIADB_ROOT_PASSWORD` | Yes | Root password (required by the MariaDB Docker image). Must match the root segment of `DATABASE_SCHEMA_URL` on app services. |
+| `MARIADB_ROOT_PASSWORD` | Yes | Root password (required by the MariaDB Docker image). Used in the composed `DATABASE_SCHEMA_URL` (`mysql://root:…@mariadb:3306/…`). |
 | `MARIADB_DATABASE` | Yes | Database name created on first init. |
 | `MARIADB_USER` | Yes | Application user name. |
 | `MARIADB_PASSWORD` | Yes | Application user password. |
@@ -80,14 +82,14 @@ See [MariaDB Docker environment variables](https://hub.docker.com/_/mariadb) for
 
 | Variable | Required | Description |
 | -------- | -------- | ----------- |
-| `DATABASE_URL` | Yes* | `mysql://…` connection URI for MariaDB. *Required for notification inbox/settings APIs and the notify worker; if unset, notification features stay off. |
-| `DATABASE_SCHEMA_URL` | No | If set, used **only** for idempotent `CREATE TABLE` / seed DDL. If unset, DDL uses `DATABASE_URL`. URL-encode special characters in passwords. |
+| `DATABASE_URL` | Yes* | `mysql://…` URI seen by the Node process. *With Docker Compose, this is **set in YAML** from `MARIADB_USER`, `MARIADB_PASSWORD`, `MARIADB_DATABASE`, host `mariadb`, port `3306`.* For **`npm run dev`** on the host, set a full URI in `.env` (e.g. `127.0.0.1`). If unset, notification features stay off. |
+| `DATABASE_SCHEMA_URL` | No | If set, used **only** for idempotent `CREATE TABLE` / seed DDL. *Compose sets* `mysql://root:${MARIADB_ROOT_PASSWORD}@mariadb:3306/${MARIADB_DATABASE}`. If unset in other setups, DDL uses `DATABASE_URL`. |
 
 ---
 
 ## Notification worker (`hydrodash-notify` service)
 
-Use the same OpenSprinkler and `DATABASE_*` variables as the web app (Compose shares them via YAML anchor). Add any of the following under `environment:` when you need them:
+Compose passes the same composed `DATABASE_*` and OpenSprinkler variables as the web app. Add any of the following under `environment:` when you need them:
 
 | Variable | Required | Description |
 | -------- | -------- | ----------- |
@@ -139,4 +141,4 @@ There is **no** default for `OS_BASE_URL` or MariaDB names/passwords in applicat
 
 Copy [`.env.example`](../.env.example) to `.env` and fill in values for **`npm run dev`** / **`npm run start`** and/or **`docker compose up`**.
 
-If you run **only MariaDB** from Compose (`docker compose up mariadb`) and the app on the host, use `127.0.0.1:3306` in `DATABASE_URL` instead of `mariadb`.
+If you run **only MariaDB** from Compose (`docker compose up mariadb`) and the app on the host, set **`DATABASE_URL`** (and optionally **`DATABASE_SCHEMA_URL`**) yourself in `.env`—e.g. `mysql://user:pass@127.0.0.1:3306/hydrodash`.

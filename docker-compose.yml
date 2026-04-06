@@ -24,8 +24,8 @@ services:
     image: ghcr.io/gilbertorconde/hydrodash:latest
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL}
-      DATABASE_SCHEMA_URL: ${DATABASE_SCHEMA_URL}
+      DATABASE_URL: mysql://${MARIADB_USER}:${MARIADB_PASSWORD}@mariadb:3306/${MARIADB_DATABASE}
+      DATABASE_SCHEMA_URL: mysql://root:${MARIADB_ROOT_PASSWORD}@mariadb:3306/${MARIADB_DATABASE}
       OS_BASE_URL: ${OS_BASE_URL}
       OS_PORT: ${OS_PORT}
       OS_PASSWORD: ${OS_PASSWORD}
@@ -44,8 +44,8 @@ services:
     command: ['node', 'dist/notifications-service.mjs']
     environment:
       NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL}
-      DATABASE_SCHEMA_URL: ${DATABASE_SCHEMA_URL}
+      DATABASE_URL: mysql://${MARIADB_USER}:${MARIADB_PASSWORD}@mariadb:3306/${MARIADB_DATABASE}
+      DATABASE_SCHEMA_URL: mysql://root:${MARIADB_ROOT_PASSWORD}@mariadb:3306/${MARIADB_DATABASE}
       OS_BASE_URL: ${OS_BASE_URL}
       OS_PORT: ${OS_PORT}
       OS_PASSWORD: ${OS_PASSWORD}
