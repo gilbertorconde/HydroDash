@@ -36,6 +36,8 @@ Suggested headers when proxying (so the app sees the original host and scheme wh
 
 A sample **nginx** `server` block lives at [`docker/nginx.conf`](../docker/nginx.conf): adjust the `upstream` to `127.0.0.1:8080` when the proxy runs on the host, or keep `hydrodash:4173` if nginx shares the Compose network.
 
+**`PREVIEW_ALLOWED_HOSTS`** (optional, `hydrodash` service only): comma-separated hostnames Vite’s **`vite preview`** accepts on the `Host` header (e.g. your public DNS). If **unset or empty**, the app allows **any** host so you do not need to change the repo for each deployment. Set it to restrict to specific names (slightly stricter if the container port is reachable without the proxy).
+
 ---
 
 ## MariaDB (`mariadb` service)
