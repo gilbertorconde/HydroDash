@@ -14,6 +14,7 @@ import { Route as ToolsRouteImport } from './routes/tools'
 import { Route as StationsRouteImport } from './routes/stations'
 import { Route as SitesRouteImport } from './routes/sites'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SensorsRouteImport } from './routes/sensors'
 import { Route as ProgramsRouteImport } from './routes/programs'
 import { Route as PreviewRouteImport } from './routes/preview'
 import { Route as MoreRouteImport } from './routes/more'
@@ -60,6 +61,11 @@ const SitesRoute = SitesRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SensorsRoute = SensorsRouteImport.update({
+  id: '/sensors',
+  path: '/sensors',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProgramsRoute = ProgramsRouteImport.update({
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/more': typeof MoreRoute
   '/preview': typeof PreviewRoute
   '/programs': typeof ProgramsRoute
+  '/sensors': typeof SensorsRoute
   '/settings': typeof SettingsRoute
   '/sites': typeof SitesRoute
   '/stations': typeof StationsRoute
@@ -217,6 +224,7 @@ export interface FileRoutesByTo {
   '/more': typeof MoreRoute
   '/preview': typeof PreviewRoute
   '/programs': typeof ProgramsRoute
+  '/sensors': typeof SensorsRoute
   '/settings': typeof SettingsRoute
   '/sites': typeof SitesRoute
   '/stations': typeof StationsRoute
@@ -247,6 +255,7 @@ export interface FileRoutesById {
   '/more': typeof MoreRoute
   '/preview': typeof PreviewRoute
   '/programs': typeof ProgramsRoute
+  '/sensors': typeof SensorsRoute
   '/settings': typeof SettingsRoute
   '/sites': typeof SitesRoute
   '/stations': typeof StationsRoute
@@ -278,6 +287,7 @@ export interface FileRouteTypes {
     | '/more'
     | '/preview'
     | '/programs'
+    | '/sensors'
     | '/settings'
     | '/sites'
     | '/stations'
@@ -307,6 +317,7 @@ export interface FileRouteTypes {
     | '/more'
     | '/preview'
     | '/programs'
+    | '/sensors'
     | '/settings'
     | '/sites'
     | '/stations'
@@ -336,6 +347,7 @@ export interface FileRouteTypes {
     | '/more'
     | '/preview'
     | '/programs'
+    | '/sensors'
     | '/settings'
     | '/sites'
     | '/stations'
@@ -366,6 +378,7 @@ export interface RootRouteChildren {
   MoreRoute: typeof MoreRoute
   PreviewRoute: typeof PreviewRoute
   ProgramsRoute: typeof ProgramsRoute
+  SensorsRoute: typeof SensorsRoute
   SettingsRoute: typeof SettingsRoute
   SitesRoute: typeof SitesRoute
   StationsRoute: typeof StationsRoute
@@ -419,6 +432,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sensors': {
+      id: '/sensors'
+      path: '/sensors'
+      fullPath: '/sensors'
+      preLoaderRoute: typeof SensorsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/programs': {
@@ -590,6 +610,7 @@ const rootRouteChildren: RootRouteChildren = {
   MoreRoute: MoreRoute,
   PreviewRoute: PreviewRoute,
   ProgramsRoute: ProgramsRoute,
+  SensorsRoute: SensorsRoute,
   SettingsRoute: SettingsRoute,
   SitesRoute: SitesRoute,
   StationsRoute: StationsRoute,

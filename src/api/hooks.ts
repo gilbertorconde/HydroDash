@@ -10,6 +10,7 @@ import type { NotificationSettingsJson } from '../server/notifications/types'
 import { programToVParam, getProgramRange } from '../lib/programCodec'
 import { normalizeJlPayload } from '../lib/irrigationLog'
 import { fetchLatestOpenSprinklerFirmwareRelease } from '../lib/opensprinklerFirmwareRelease'
+import type { SensorGetPayload, SensorListPayload, SensorLogPayload } from '../lib/opensprinklerSensorsApi'
 
 export const qk = {
   all: ['hydrodash'] as const,
@@ -27,6 +28,9 @@ export const qk = {
   jl: (start: number, end: number) => [...qk.all, 'jl', start, end] as const,
   db: () => [...qk.all, 'db'] as const,
   osFirmwareGithubLatest: () => [...qk.all, 'os-firmware-github-latest'] as const,
+  sl: () => [...qk.all, 'sl'] as const,
+  sg: () => [...qk.all, 'sg'] as const,
+  so: (nr: number, lasthours: number, max: number) => [...qk.all, 'so', nr, lasthours, max] as const,
 }
 
 const isBrowser = typeof window !== 'undefined'
@@ -306,6 +310,70 @@ export function useLogs(start: number, end: number, enabled = true) {
     },
     enabled: isBrowser && enabled && Number.isFinite(start) && Number.isFinite(end) && end >= start,
     staleTime: 60_000,
+  })
+}
+
+export type SensorListQueryResult =
+  | { kind: 'ok'; data: SensorListPayload }
+  | { kind: 'unsupported'; message: string }
+
+async function fetchSensorListResult(): Promise<SensorListQueryResult> {
+  try {
+    const data = await osFetchJson<SensorListPayload>('/sl')
+    return { kind: 'ok', data }
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Request failed'
+    return { kind: 'unsupported', message }
+  }
+}
+
+/** Extended sensor API: list definitions (requires firmware that implements sensor endpoints). */
+export function useSensorList() {
+  return useQuery({
+    queryKey: qk.sl(),
+    queryFn: fetchSensorListResult,
+    enabled: isBrowser,
+    staleTime: 30_000,
+  })
+}
+
+/** Latest cached readings for all sensors. */
+export function useSensorGet(enabled: boolean) {
+  return useQuery({
+    queryKey: qk.sg(),
+    queryFn: () => osFetchJson<SensorGetPayload>('/sg'),
+    enabled: isBrowser && enabled,
+    staleTime: 15_000,
+    refetchInterval: enabled ? 30_000 : false,
+  })
+}
+
+/** Log samples for charting (`lasthours` + `max` match common firmware query params). */
+export function useSensorLog(nr: number, lasthours: number, max: number, enabled: boolean) {
+  return useQuery({
+    queryKey: qk.so(nr, lasthours, max),
+    queryFn: () =>
+      osFetchJson<SensorLogPayload>('/so', {
+        nr,
+        lasthours,
+        max,
+      }),
+    enabled: isBrowser && enabled && nr > 0,
+    staleTime: 60_000,
+  })
+}
+
+/** Trigger a fresh read on the controller (all sensors or one `nr`). */
+export function useSensorReadNow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (nr: number) => {
+      if (nr > 0) await osFetchJson<SensorGetPayload>('/sr', { nr })
+      else await osFetchJson<SensorGetPayload>('/sr', {})
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: qk.sg() })
+    },
   })
 }
 
