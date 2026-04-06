@@ -97,16 +97,6 @@ function MoreRoute() {
             pushConfigured={notifConfig.data?.pushEnabled ?? false}
           />
         ) : null}
-
-        <h2 className={styles.sectionTitle}>Not in HydroDash yet</h2>
-        <Card title="Roadmap-style gaps">
-          <ul className={styles.longTail}>
-            <li>Localization (i18n) and locale files</li>
-          </ul>
-          <p className={styles.longTailNote}>
-            Use the official OpenSprinkler app for these until they land here.
-          </p>
-        </Card>
       </div>
     </ProtectedPage>
   )
