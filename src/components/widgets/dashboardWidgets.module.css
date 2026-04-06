@@ -222,11 +222,44 @@
   font-weight: 700;
 }
 
+.firmwareUpdateNote {
+  margin: var(--space-md) 0 0;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent, var(--color-cta)) 12%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-accent, var(--color-cta)) 28%, var(--color-border));
+  border-radius: 8px;
+}
+
+.firmwareUpdateNote a {
+  font-weight: 600;
+  color: var(--color-accent, var(--color-cta));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.firmwareUpdateNote a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.firmwareUpToDateNote {
+  margin: var(--space-md) 0 0;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--color-success) 22%, var(--color-text));
+  background: color-mix(in srgb, var(--color-success) 10%, var(--color-surface));
+  border: 1px solid color-mix(in srgb, var(--color-success) 25%, var(--color-border));
+  border-radius: 8px;
+}
+
 .widgetStack {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  min-height: 0;
+  min-height: 100%;
 }
 
 .widgetMeta {
@@ -255,6 +288,7 @@
 
 .tableWrap {
   max-height: min(22rem, 52vh);
+  flex: 1;
   overflow: auto;
   margin: 0 calc(var(--space-sm) * -1);
   padding: 0 var(--space-sm);

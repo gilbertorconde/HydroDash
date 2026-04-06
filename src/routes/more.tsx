@@ -96,7 +96,6 @@ function MoreRoute() {
         <h2 className={styles.sectionTitle}>Not in HydroDash yet</h2>
         <Card title="Roadmap-style gaps">
           <ul className={styles.longTail}>
-            <li>Firmware OTA checks and update flow</li>
             <li>Analog sensor charts and configuration</li>
             <li>Localization (i18n) and locale files</li>
           </ul>

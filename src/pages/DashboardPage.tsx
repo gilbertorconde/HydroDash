@@ -15,6 +15,7 @@ import {
   useController,
   useJsonAll,
   useChangeValues,
+  useLatestOpenSprinklerFirmwareRelease,
   usePauseQueue,
   useLogs,
   useManualStation,
@@ -46,6 +47,7 @@ import {
   visibleTileIdsOrdered,
 } from '../lib/dashboardTileVisibility'
 import { parseLogEntries } from '../lib/irrigationLog'
+import { deviceFirmwareIsOlderThanRelease } from '../lib/opensprinklerFirmwareRelease'
 import {
   isProgramActiveOnController,
   readQuickRunManualPid,
@@ -252,6 +254,33 @@ export function DashboardPage() {
   const opts = ja.data?.options as Record<string, unknown> | undefined
   const fwv = opts?.fwv
   const fwm = opts?.fwm
+  const deviceFwv = typeof fwv === 'number' && Number.isFinite(fwv) ? fwv : null
+  const deviceFwm = typeof fwm === 'number' && Number.isFinite(fwm) ? fwm : null
+  const firmwareGithub = useLatestOpenSprinklerFirmwareRelease(
+    ja.isSuccess && deviceFwv != null && deviceFwm != null,
+  )
+  const controllerFirmwareUpdate = useMemo(() => {
+    const info = firmwareGithub.data
+    if (
+      !info ||
+      deviceFwv == null ||
+      deviceFwm == null ||
+      !deviceFirmwareIsOlderThanRelease({ fwv: deviceFwv, fwm: deviceFwm }, info.parsed)
+    ) {
+      return null
+    }
+    return { versionLabel: info.versionLabel, releaseUrl: info.htmlUrl }
+  }, [firmwareGithub.data, deviceFwv, deviceFwm])
+
+  const controllerFirmwareUpToDate = useMemo(() => {
+    if (!firmwareGithub.isSuccess || !firmwareGithub.data || deviceFwv == null || deviceFwm == null) {
+      return false
+    }
+    return !deviceFirmwareIsOlderThanRelease(
+      { fwv: deviceFwv, fwm: deviceFwm },
+      firmwareGithub.data.parsed,
+    )
+  }, [firmwareGithub.isSuccess, firmwareGithub.data, deviceFwv, deviceFwm])
   const settings = jc.data
   const [actionMsg, setActionMsg] = useState<string | null>(null)
   const [actionErr, setActionErr] = useState<string | null>(null)
@@ -278,7 +307,15 @@ export function DashboardPage() {
   function renderTileBody(id: DashboardTileId) {
     switch (id) {
       case 'controller':
-        return <ControllerWidget ja={ja} fwv={fwv} fwm={fwm} />
+        return (
+          <ControllerWidget
+            ja={ja}
+            fwv={fwv}
+            fwm={fwm}
+            firmwareUpdate={controllerFirmwareUpdate}
+            firmwareUpToDate={controllerFirmwareUpToDate}
+          />
+        )
       case 'live':
         return (
           <LiveStatusWidget

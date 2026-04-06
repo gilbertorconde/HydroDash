@@ -9,6 +9,7 @@ import type { ControllerState, JsonAll, ProgramRow } from './types'
 import type { NotificationSettingsJson } from '../server/notifications/types'
 import { programToVParam, getProgramRange } from '../lib/programCodec'
 import { normalizeJlPayload } from '../lib/irrigationLog'
+import { fetchLatestOpenSprinklerFirmwareRelease } from '../lib/opensprinklerFirmwareRelease'
 
 export const qk = {
   all: ['hydrodash'] as const,
@@ -25,6 +26,7 @@ export const qk = {
   je: () => [...qk.all, 'je'] as const,
   jl: (start: number, end: number) => [...qk.all, 'jl', start, end] as const,
   db: () => [...qk.all, 'db'] as const,
+  osFirmwareGithubLatest: () => [...qk.all, 'os-firmware-github-latest'] as const,
 }
 
 const isBrowser = typeof window !== 'undefined'
@@ -244,6 +246,18 @@ export function useController(
     refetchInterval: pollMs === false ? false : pollMs,
     staleTime: pollMs === false ? 30_000 : Math.min(2000, Number(pollMs) / 2),
     ...options,
+  })
+}
+
+/** Latest unified firmware release from OpenSprinkler GitHub (for version check only; no OTA here). */
+export function useLatestOpenSprinklerFirmwareRelease(enabled = true) {
+  return useQuery({
+    queryKey: qk.osFirmwareGithubLatest(),
+    queryFn: fetchLatestOpenSprinklerFirmwareRelease,
+    enabled: isBrowser && enabled,
+    staleTime: 12 * 60 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
+    retry: 1,
   })
 }
 
