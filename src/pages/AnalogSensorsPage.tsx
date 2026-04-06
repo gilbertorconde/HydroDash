@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react'
-import { useSensorGet, useSensorList, useSensorLog, useSensorReadNow } from '../api/hooks'
+import {
+  useSensorDelete,
+  useSensorGet,
+  useSensorList,
+  useSensorLog,
+  useSensorReadNow,
+  useSensorTypes,
+} from '../api/hooks'
+import { SensorEditorModal } from '../components/SensorEditorModal'
 import { Button, Card, ErrorBox, Spinner } from '../components/ui'
 import { formatEpochSecondsLocale } from '../lib/formatLocale'
 import type { SensorDataEntry, SensorLogEntry } from '../lib/opensprinklerSensorsApi'
@@ -89,7 +97,14 @@ export function AnalogSensorsPage() {
   const listPayload = sl.data?.kind === 'ok' ? sl.data.data : undefined
   const sensors = listPayload?.sensors ?? []
   const sg = useSensorGet(apiOk === true)
+  const sf = useSensorTypes(apiOk === true)
   const readNow = useSensorReadNow()
+  const delSensor = useSensorDelete()
+  const sensorTypesList = useMemo(() => sf.data?.sensorTypes ?? [], [sf.data])
+
+  const [editorOpen, setEditorOpen] = useState(false)
+  const [editorMode, setEditorMode] = useState<'new' | 'edit'>('new')
+  const [editorRow, setEditorRow] = useState<Record<string, unknown> | null>(null)
 
   const valueByNr = useMemo(() => {
     const map = new Map<number, SensorDataEntry>()
@@ -104,6 +119,11 @@ export function AnalogSensorsPage() {
   const sensorRows = useMemo(() => {
     return sensors.filter((s) => sensorNr(s) != null) as Record<string, unknown>[]
   }, [sensors])
+
+  const nextNr = useMemo(() => {
+    const nrs = sensorRows.map((s) => sensorNr(s)).filter((n): n is number => n != null)
+    return nrs.length > 0 ? Math.max(...nrs) + 1 : 1
+  }, [sensorRows])
 
   const [chartNr, setChartNr] = useState(0)
   const [lastHours, setLastHours] = useState(24)
@@ -158,8 +178,8 @@ export function AnalogSensorsPage() {
     <div className={styles.page}>
       <h1 className={styles.title}>Sensors</h1>
       <p className={styles.intro}>
-        Lists configured sensors, last readings, and log history when the controller exposes them (same
-        model as the OpenSprinkler app on extended firmware).
+        Same sensor list, live values, log chart, read-now, and definition editor as the controller UI on
+        firmware that implements the extended sensor API.
       </p>
 
       {warnings && warnings.length > 0 ? (
@@ -174,6 +194,13 @@ export function AnalogSensorsPage() {
       ) : null}
 
       <div className={styles.toolbar}>
+        <Button variant="cta" type="button" onClick={() => {
+          setEditorMode('new')
+          setEditorRow(null)
+          setEditorOpen(true)
+        }}>
+          Add sensor
+        </Button>
         <Button
           variant="secondary"
           disabled={readNow.isPending}
@@ -188,6 +215,12 @@ export function AnalogSensorsPage() {
       </div>
 
       {sg.isError ? <ErrorBox message={sg.error instanceof Error ? sg.error.message : 'Load failed'} /> : null}
+      {sf.isError ? (
+        <ErrorBox message="Could not load sensor type list; you can still enter a numeric type when adding a sensor." />
+      ) : null}
+      {delSensor.isError ? (
+        <ErrorBox message={delSensor.error instanceof Error ? delSensor.error.message : 'Delete failed'} />
+      ) : null}
 
       <div className={styles.tableWrap}>
         <table className={styles.table}>
@@ -199,13 +232,13 @@ export function AnalogSensorsPage() {
               <th>Value</th>
               <th>Unit</th>
               <th>Last read</th>
-              <th />
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {sensorRows.length === 0 ? (
               <tr>
-                <td colSpan={7}>
+                <td colSpan={8}>
                   <span className={styles.mono}>No sensors configured.</span>
                 </td>
               </tr>
@@ -227,13 +260,37 @@ export function AnalogSensorsPage() {
                     <td>{typeof unit === 'string' ? unit : '—'}</td>
                     <td>{formatLastRead(last)}</td>
                     <td>
-                      <Button
-                        variant="ghost"
-                        disabled={readNow.isPending}
-                        onClick={() => readNow.mutate(nr)}
-                      >
-                        Read
-                      </Button>
+                      <span className={styles.rowActions}>
+                        <Button
+                          variant="ghost"
+                          disabled={readNow.isPending}
+                          onClick={() => readNow.mutate(nr)}
+                        >
+                          Read
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          type="button"
+                          onClick={() => {
+                            setEditorMode('edit')
+                            setEditorRow(s)
+                            setEditorOpen(true)
+                          }}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          type="button"
+                          disabled={delSensor.isPending}
+                          onClick={() => {
+                            if (!window.confirm(`Remove sensor ${nr}?`)) return
+                            delSensor.mutate(nr)
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </span>
                     </td>
                   </tr>
                 )
@@ -302,6 +359,15 @@ export function AnalogSensorsPage() {
           <SensorLogChart entries={so.data?.log ?? []} unit={chartUnit} />
         )}
       </Card>
+
+      <SensorEditorModal
+        open={editorOpen}
+        onClose={() => setEditorOpen(false)}
+        mode={editorMode}
+        initialRow={editorRow}
+        nextNr={nextNr}
+        types={sensorTypesList}
+      />
     </div>
   )
 }

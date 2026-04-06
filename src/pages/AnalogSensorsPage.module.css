@@ -23,6 +23,13 @@
   margin-bottom: var(--space-md);
 }
 
+.rowActions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.15rem;
+}
+
 .tableWrap {
   overflow-x: auto;
   margin: 0 0 var(--space-lg);

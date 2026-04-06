@@ -44,7 +44,7 @@ const links = [
   {
     to: '/sensors',
     title: 'Sensors',
-    desc: 'Extended analog sensors: list, live values, log chart, and read-now (when the firmware exposes them).',
+    desc: 'Extended sensors: list, edit definitions, live values, log chart, and read-now when the firmware exposes them.',
   },
 ] as const
 
@@ -101,7 +101,6 @@ function MoreRoute() {
         <h2 className={styles.sectionTitle}>Not in HydroDash yet</h2>
         <Card title="Roadmap-style gaps">
           <ul className={styles.longTail}>
-            <li>Full sensor editor (create or change sensor definitions, same as app)</li>
             <li>Localization (i18n) and locale files</li>
           </ul>
           <p className={styles.longTailNote}>

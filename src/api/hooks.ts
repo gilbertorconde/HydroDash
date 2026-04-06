@@ -10,7 +10,12 @@ import type { NotificationSettingsJson } from '../server/notifications/types'
 import { programToVParam, getProgramRange } from '../lib/programCodec'
 import { normalizeJlPayload } from '../lib/irrigationLog'
 import { fetchLatestOpenSprinklerFirmwareRelease } from '../lib/opensprinklerFirmwareRelease'
-import type { SensorGetPayload, SensorListPayload, SensorLogPayload } from '../lib/opensprinklerSensorsApi'
+import type {
+  SensorGetPayload,
+  SensorListPayload,
+  SensorLogPayload,
+  SensorTypesPayload,
+} from '../lib/opensprinklerSensorsApi'
 
 export const qk = {
   all: ['hydrodash'] as const,
@@ -31,6 +36,7 @@ export const qk = {
   sl: () => [...qk.all, 'sl'] as const,
   sg: () => [...qk.all, 'sg'] as const,
   so: (nr: number, lasthours: number, max: number) => [...qk.all, 'so', nr, lasthours, max] as const,
+  sf: () => [...qk.all, 'sf'] as const,
 }
 
 const isBrowser = typeof window !== 'undefined'
@@ -374,6 +380,50 @@ export function useSensorReadNow() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: qk.sg() })
     },
+  })
+}
+
+/** Supported sensor type ids and labels (extended firmware `/sf`). */
+export function useSensorTypes(enabled: boolean) {
+  return useQuery({
+    queryKey: qk.sf(),
+    queryFn: () => osFetchJson<SensorTypesPayload>('/sf'),
+    enabled: isBrowser && enabled,
+    staleTime: 300_000,
+  })
+}
+
+function invalidateSensorQueries(qc: ReturnType<typeof useQueryClient>) {
+  void qc.invalidateQueries({ queryKey: qk.sl() })
+  void qc.invalidateQueries({ queryKey: qk.sg() })
+  void qc.invalidateQueries({ queryKey: [...qk.all, 'so'] })
+}
+
+/**
+ * Create or update a sensor (`/sc` query params, same contract as the controller UI).
+ * Omit keys you do not want to send; empty strings are skipped.
+ */
+export function useSensorSave() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (params: Record<string, string | number | undefined>) => {
+      const flat: Record<string, string | number> = {}
+      for (const [k, v] of Object.entries(params)) {
+        if (v === undefined || v === '') continue
+        flat[k] = v
+      }
+      return osFetchJson<Record<string, unknown>>('/sc', flat)
+    },
+    onSuccess: () => invalidateSensorQueries(qc),
+  })
+}
+
+/** Remove sensor `nr` (`type=0` on `/sc`). */
+export function useSensorDelete() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (nr: number) => osFetchJson<Record<string, unknown>>('/sc', { nr, type: 0 }),
+    onSuccess: () => invalidateSensorQueries(qc),
   })
 }
 
