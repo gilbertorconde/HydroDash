@@ -2,7 +2,7 @@
 
 HydroDash reads configuration from the environment. **`docker-compose.yml`** passes **`${VAR_NAME}`** references only (no default values in YAML). Docker Compose substitutes them from a **`.env`** file next to the compose file or from your shell. See [`.env.example`](../.env.example) for names to define.
 
-Optional settings (ntfy, notification worker tuning, `VITE_*`, `OS_SITES`, …) are **not** listed in Compose—add `KEY: ${KEY}` under `environment:` when you need them; this document describes each variable.
+Optional settings (ntfy, notification worker tuning, `VITE_*`, `OS_SITES`, …) are **not** listed in Compose. Add `KEY: ${KEY}` under `environment:` when you need them; this document describes each variable.
 
 For **`npm run dev`** / **`npm run build`**, the same **`.env`** supplies Vite and the dev server.
 
@@ -16,11 +16,11 @@ Optional tuning variables used only by Node may fall back to defaults **in code*
 
 The **`hydrodash`** service maps **`8080:4173`** (host → container). Edit `ports` if you want another host port.
 
-`hydrodash` and **`hydrodash-notify`** duplicate the same OpenSprinkler variables where both need them; the notify service does **not** set `HYDRODASH_LOGIN_PASSWORD` (worker only). There is **no** `env_file:` on services—only **`${VAR}` interpolation** when Compose parses the file.
+`hydrodash` and **`hydrodash-notify`** duplicate the same OpenSprinkler variables where both need them; the notify service does **not** set `HYDRODASH_LOGIN_PASSWORD` (worker only). There is **no** `env_file:` on services; only **`${VAR}` interpolation** applies when Compose parses the file.
 
 **`DATABASE_URL`** and **`DATABASE_SCHEMA_URL`** are **assembled in `docker-compose.yml`** from **`MARIADB_*`** (same pattern as many stacks: app user URL + root URL for DDL). You do **not** set `DATABASE_URL` / `DATABASE_SCHEMA_URL` in `.env` for `docker compose up`. Hostname is **`mariadb`** (Compose service name), port **3306**.
 
-Passwords with **`@`, `:`, `/`, `#`, `%`, etc.** must be **percent-encoded** in URI form; otherwise the connection string is ambiguous—prefer alphanumeric passwords for MariaDB users or encode them.
+Passwords with **`@`, `:`, `/`, `#`, `%`, etc.** must be **percent-encoded** in URI form; otherwise the connection string is ambiguous. Prefer alphanumeric passwords for MariaDB users or encode them.
 
 ---
 
@@ -30,9 +30,9 @@ Compose does **not** include a reverse proxy. The app is plain HTTP on the mappe
 
 Suggested headers when proxying (so the app sees the original host and scheme where relevant):
 
-- `Host` — client `Host`
-- `X-Forwarded-For` — client chain
-- `X-Forwarded-Proto` — `https` or `http`
+- `Host`: forward the client `Host` header
+- `X-Forwarded-For`: client chain
+- `X-Forwarded-Proto`: `https` or `http`
 
 A sample **nginx** `server` block lives at [`docker/nginx.conf`](../docker/nginx.conf): adjust the `upstream` to `127.0.0.1:8080` when the proxy runs on the host, or keep `hydrodash:4173` if nginx shares the Compose network.
 
@@ -42,7 +42,7 @@ A sample **nginx** `server` block lives at [`docker/nginx.conf`](../docker/nginx
 
 ## MariaDB (`mariadb` service)
 
-Referenced in `docker-compose.yml` as **`${MARIADB_ROOT_PASSWORD}`**, **`${MARIADB_DATABASE}`**, **`${MARIADB_USER}`**, **`${MARIADB_PASSWORD}`**—define them in `.env`.
+Referenced in `docker-compose.yml` as **`${MARIADB_ROOT_PASSWORD}`**, **`${MARIADB_DATABASE}`**, **`${MARIADB_USER}`**, **`${MARIADB_PASSWORD}`**. Define them in `.env`.
 
 | Variable | Required | Description |
 | -------- | -------- | ----------- |
@@ -127,15 +127,15 @@ These apply **only when the variable is unset or empty** (Compose does not need 
 
 | Area | Default |
 | ---- | ------- |
-| `VITE_OPENSPLINKER_BASE_URL` (client) | `/api/os` — `DEFAULT_VITE_OPENSPLINKER_BASE_URL` in `src/lib/envDefaults.ts` |
-| `NOTIFICATIONS_POLL_INTERVAL_SEC` | `45` (min `5`) — `src/server/envDefaults.ts` |
-| `NOTIFICATIONS_RETENTION_DAYS` | `90` (min `7`) — `src/server/envDefaults.ts` |
-| `NOTIFICATIONS_HEALTH_PORT` | `8081` — `src/server/envDefaults.ts` |
+| `VITE_OPENSPLINKER_BASE_URL` (client) | `/api/os` (`DEFAULT_VITE_OPENSPLINKER_BASE_URL` in `src/lib/envDefaults.ts`) |
+| `NOTIFICATIONS_POLL_INTERVAL_SEC` | `45` (min `5`); see `src/server/envDefaults.ts` |
+| `NOTIFICATIONS_RETENTION_DAYS` | `90` (min `7`); see `src/server/envDefaults.ts` |
+| `NOTIFICATIONS_HEALTH_PORT` | `8081`; see `src/server/envDefaults.ts` |
 | `NOTIFICATIONS_HEALTH_DISABLE` | health on unless value is `1` |
 | `NOTIFICATIONS_ENABLED` | worker runs unless value is `0` |
-| `DATABASE_SCHEMA_URL` | same connection as `DATABASE_URL` for DDL — `src/server/notifications/schema.ts` |
+| `DATABASE_SCHEMA_URL` | same connection as `DATABASE_URL` for DDL; see `src/server/notifications/schema.ts` |
 
-There is **no** default for `OS_BASE_URL` or MariaDB names/passwords in application code—you supply values via `.env` (or shell) for Compose substitution.
+There is **no** default for `OS_BASE_URL` or MariaDB names/passwords in application code. You supply values via `.env` (or shell) for Compose substitution.
 
 ---
 
@@ -143,4 +143,4 @@ There is **no** default for `OS_BASE_URL` or MariaDB names/passwords in applicat
 
 Copy [`.env.example`](../.env.example) to `.env` and fill in values for **`npm run dev`** / **`npm run start`** and/or **`docker compose up`**.
 
-If you run **only MariaDB** from Compose (`docker compose up mariadb`) and the app on the host, set **`DATABASE_URL`** (and optionally **`DATABASE_SCHEMA_URL`**) yourself in `.env`—e.g. `mysql://user:pass@127.0.0.1:3306/hydrodash`.
+If you run **only MariaDB** from Compose (`docker compose up mariadb`) and the app on the host, set **`DATABASE_URL`** (and optionally **`DATABASE_SCHEMA_URL`**) yourself in `.env`, for example `mysql://user:pass@127.0.0.1:3306/hydrodash`.

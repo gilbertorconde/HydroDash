@@ -10,7 +10,7 @@ It is **not** a committed delivery schedule; it is a requirements and dependency
 
 ### Goal
 
-Let users back up and restore controller configuration (programs, stations, options, and related state) in a way comparable to the official **OpenSprinkler** mobile app—typically as a JSON file the user can save and re-apply.
+Let users back up and restore controller configuration (programs, stations, options, and related state) in a way comparable to the official **OpenSprinkler** mobile app, typically as a JSON file the user can save and re-apply.
 
 ### Current state in HydroDash
 
@@ -60,7 +60,7 @@ Surface whether a newer **firmware** is available and guide the user through an 
 ### Gaps
 
 - Clarify **which hardware generations** HydroDash targets (OSPi, OS 3.x, etc.) and how OTA differs per platform.
-- Determine **authoritative update source** (OpenSprinkler cloud API, GitHub releases, or device-only with user-supplied binary—match OG app behavior).
+- Determine **authoritative update source** (OpenSprinkler cloud API, GitHub releases, or device-only with user-supplied binary) to match OG app behavior.
 
 ### Technical requirements
 
@@ -118,12 +118,12 @@ A **notifications** experience beyond configuring which events fire integrations
 
 ### Current state in HydroDash
 
-- **Settings** includes **notification event** checkboxes (MQTT, email, IFTTT-related bitmask) via `NOTIFICATION_EVENT_LABELS` and related helpers in `src/lib/opensprinklerOptions.ts`—this is **configuration**, not a notification **inbox** or **history** panel.
+- **Settings** includes **notification event** checkboxes (MQTT, email, IFTTT-related bitmask) via `NOTIFICATION_EVENT_LABELS` and related helpers in `src/lib/opensprinklerOptions.ts`. That is **configuration**, not a notification **inbox** or **history** panel.
 
 ### Gaps
 
 - Define product scope: **in-app log of events** (if firmware exposes it), **push** (requires PWA/service worker + backend), or **read-only list** from a vendor API.
-- Many notifications are **outbound** (email/MQTT); HydroDash may not receive them without a new backend—narrow scope explicitly.
+- Many notifications are **outbound** (email/MQTT); HydroDash may not receive them without a new backend. Narrow scope explicitly.
 
 ### Technical requirements
 
@@ -135,7 +135,7 @@ A **notifications** experience beyond configuring which events fire integrations
 
 ### Acceptance criteria (draft)
 
-- Documented scope: either (A) **history from existing controller data** with clear limits, or (B) **deferred** until a backend exists—avoid a panel that duplicates Settings checkboxes only.
+- Documented scope: either (A) **history from existing controller data** with clear limits, or (B) **deferred** until a backend exists. Avoid a panel that duplicates Settings checkboxes only.
 
 ---
 
@@ -148,11 +148,11 @@ Translate the **HydroDash** UI (not just date/number formatting) using locale fi
 ### Current state in HydroDash
 
 - UI strings are **hard-coded in English** in components and pages.
-- `src/lib/formatLocale.ts` uses the **browser locale** for dates/times with optional 12h/24h from app preferences—this is **not** full i18n.
+- `src/lib/formatLocale.ts` uses the **browser locale** for dates/times with optional 12h/24h from app preferences. That is **not** full i18n.
 
 ### Gaps
 
-- Choose stack: e.g. **react-i18next**, **Lingui**, or **FormatJS**—must work with Vite, TanStack Start, and any SSR constraints.
+- Choose stack: e.g. **react-i18next**, **Lingui**, or **FormatJS**. It must work with Vite, TanStack Start, and any SSR constraints.
 - Extract strings, establish **key naming**, default locale (`en`), fallback behavior.
 - **Community process**: where translation files live, how to validate new locales, and CI checks for missing keys.
 

@@ -4,13 +4,13 @@ HydroDash can record controller events in MariaDB and optionally push them to [n
 
 ## Components
 
-1. **MariaDB** — Stores notification settings, inbox rows (`notification_events`), and poller snapshots (`notification_poller_state`). The web app and notify worker apply the schema on startup (`src/server/notifications/schema.ts`). `docker/mariadb/init/01-schema.sql` is optional reference for manual installs.
-2. **`hydrodash` (web)** — Session-authenticated APIs under `/api/notifications/*` read and update the same database.
-3. **`hydrodash-notify` (sidecar)** — Node process that polls each configured OpenSprinkler (`OS_BASE_URL` or `OS_SITES`), diffs `/jc` (+ `/js`, `/jp`), inserts rows, and POSTs to ntfy when `NTFY_SERVER_URL` is set.
+1. **MariaDB**: stores notification settings, inbox rows (`notification_events`), and poller snapshots (`notification_poller_state`). The web app and notify worker apply the schema on startup (`src/server/notifications/schema.ts`). `docker/mariadb/init/01-schema.sql` is optional reference for manual installs.
+2. **`hydrodash` (web)**: session-authenticated APIs under `/api/notifications/*` read and update the same database.
+3. **`hydrodash-notify` (sidecar)**: Node process that polls each configured OpenSprinkler (`OS_BASE_URL` or `OS_SITES`), diffs `/jc` (+ `/js`, `/jp`), inserts rows, and POSTs to ntfy when `NTFY_SERVER_URL` is set.
 
 ## Docker Compose
 
-[`docker-compose.yml`](../docker-compose.yml) **builds** `DATABASE_URL` and `DATABASE_SCHEMA_URL` from **`MARIADB_*`** (like Vaultwarden-style compose). Optional ntfy / worker tuning is in **[docs/environment.md](environment.md)**—add `KEY: ${KEY}` under `environment:` when needed.
+[`docker-compose.yml`](../docker-compose.yml) **builds** `DATABASE_URL` and `DATABASE_SCHEMA_URL` from **`MARIADB_*`** (like Vaultwarden-style compose). Optional ntfy / worker tuning is in **[docs/environment.md](environment.md)**. Add `KEY: ${KEY}` under `environment:` when needed.
 
 ## Environment variables
 

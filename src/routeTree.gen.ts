@@ -26,6 +26,7 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiOsSplatRouteImport } from './routes/api/os/$'
 import { Route as ApiNotificationsUnreadCountRouteImport } from './routes/api/notifications/unread-count'
+import { Route as ApiNotificationsTestRouteImport } from './routes/api/notifications/test'
 import { Route as ApiNotificationsSettingsRouteImport } from './routes/api/notifications/settings'
 import { Route as ApiNotificationsMarkAllReadRouteImport } from './routes/api/notifications/mark-all-read'
 import { Route as ApiNotificationsInboxRouteImport } from './routes/api/notifications/inbox'
@@ -121,6 +122,11 @@ const ApiNotificationsUnreadCountRoute =
     path: '/api/notifications/unread-count',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiNotificationsTestRoute = ApiNotificationsTestRouteImport.update({
+  id: '/api/notifications/test',
+  path: '/api/notifications/test',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiNotificationsSettingsRoute =
   ApiNotificationsSettingsRouteImport.update({
     id: '/api/notifications/settings',
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/api/notifications/inbox': typeof ApiNotificationsInboxRoute
   '/api/notifications/mark-all-read': typeof ApiNotificationsMarkAllReadRoute
   '/api/notifications/settings': typeof ApiNotificationsSettingsRoute
+  '/api/notifications/test': typeof ApiNotificationsTestRoute
   '/api/notifications/unread-count': typeof ApiNotificationsUnreadCountRoute
   '/api/os/$': typeof ApiOsSplatRoute
 }
@@ -215,6 +222,7 @@ export interface FileRoutesByTo {
   '/api/notifications/inbox': typeof ApiNotificationsInboxRoute
   '/api/notifications/mark-all-read': typeof ApiNotificationsMarkAllReadRoute
   '/api/notifications/settings': typeof ApiNotificationsSettingsRoute
+  '/api/notifications/test': typeof ApiNotificationsTestRoute
   '/api/notifications/unread-count': typeof ApiNotificationsUnreadCountRoute
   '/api/os/$': typeof ApiOsSplatRoute
 }
@@ -243,6 +251,7 @@ export interface FileRoutesById {
   '/api/notifications/inbox': typeof ApiNotificationsInboxRoute
   '/api/notifications/mark-all-read': typeof ApiNotificationsMarkAllReadRoute
   '/api/notifications/settings': typeof ApiNotificationsSettingsRoute
+  '/api/notifications/test': typeof ApiNotificationsTestRoute
   '/api/notifications/unread-count': typeof ApiNotificationsUnreadCountRoute
   '/api/os/$': typeof ApiOsSplatRoute
 }
@@ -272,6 +281,7 @@ export interface FileRouteTypes {
     | '/api/notifications/inbox'
     | '/api/notifications/mark-all-read'
     | '/api/notifications/settings'
+    | '/api/notifications/test'
     | '/api/notifications/unread-count'
     | '/api/os/$'
   fileRoutesByTo: FileRoutesByTo
@@ -299,6 +309,7 @@ export interface FileRouteTypes {
     | '/api/notifications/inbox'
     | '/api/notifications/mark-all-read'
     | '/api/notifications/settings'
+    | '/api/notifications/test'
     | '/api/notifications/unread-count'
     | '/api/os/$'
   id:
@@ -326,6 +337,7 @@ export interface FileRouteTypes {
     | '/api/notifications/inbox'
     | '/api/notifications/mark-all-read'
     | '/api/notifications/settings'
+    | '/api/notifications/test'
     | '/api/notifications/unread-count'
     | '/api/os/$'
   fileRoutesById: FileRoutesById
@@ -354,6 +366,7 @@ export interface RootRouteChildren {
   ApiNotificationsInboxRoute: typeof ApiNotificationsInboxRoute
   ApiNotificationsMarkAllReadRoute: typeof ApiNotificationsMarkAllReadRoute
   ApiNotificationsSettingsRoute: typeof ApiNotificationsSettingsRoute
+  ApiNotificationsTestRoute: typeof ApiNotificationsTestRoute
   ApiNotificationsUnreadCountRoute: typeof ApiNotificationsUnreadCountRoute
   ApiOsSplatRoute: typeof ApiOsSplatRoute
 }
@@ -479,6 +492,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiNotificationsUnreadCountRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/notifications/test': {
+      id: '/api/notifications/test'
+      path: '/api/notifications/test'
+      fullPath: '/api/notifications/test'
+      preLoaderRoute: typeof ApiNotificationsTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/notifications/settings': {
       id: '/api/notifications/settings'
       path: '/api/notifications/settings'
@@ -562,6 +582,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiNotificationsInboxRoute: ApiNotificationsInboxRoute,
   ApiNotificationsMarkAllReadRoute: ApiNotificationsMarkAllReadRoute,
   ApiNotificationsSettingsRoute: ApiNotificationsSettingsRoute,
+  ApiNotificationsTestRoute: ApiNotificationsTestRoute,
   ApiNotificationsUnreadCountRoute: ApiNotificationsUnreadCountRoute,
   ApiOsSplatRoute: ApiOsSplatRoute,
 }

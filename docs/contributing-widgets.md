@@ -36,16 +36,16 @@ Add the id and metadata in this order (TypeScript will guide you if any `Record<
    `DashboardTileId` is derived from this array; order here is the default order for new users.
 
 2. **`src/components/widgets/tileTitles.ts`**  
-   Add **`DASHBOARD_TILE_TITLES[id]`** — short label shown in the card header and in **Customize Home**.
+   Add **`DASHBOARD_TILE_TITLES[id]`**: short label shown in the card header and in **Customize Home**.
 
 3. **`src/lib/dashboardRglLayout.ts`**  
-   - **`DASHBOARD_TILE_DEFAULT_H`** — default grid **height in rows** when the tile is placed or reset.  
-   - **`DASHBOARD_TILE_ROW_BOUNDS`** — **`minH` / `maxH`** for the cog “height in rows” editor.
+   - **`DASHBOARD_TILE_DEFAULT_H`**: default grid **height in rows** when the tile is placed or reset.  
+   - **`DASHBOARD_TILE_ROW_BOUNDS`**: **`minH` / `maxH`** for the cog “height in rows” editor.
 
 4. **`src/lib/dashboardTileVisibility.ts`**  
    In **`defaultVisibility()`**, set **`[id]: true`** (or `false` if the tile should start hidden).
 
-5. **New component** — e.g. `src/components/widgets/RainDelayWidget.tsx`.  
+5. **New component**, e.g. `src/components/widgets/RainDelayWidget.tsx`.  
    Export it from **`src/components/widgets/index.ts`**.
 
 6. **`src/pages/DashboardPage.tsx`**  
@@ -61,16 +61,16 @@ Layouts live in **`localStorage`** under keys such as `hydrodash.dashboardRglLay
 
 ### Data and actions
 
-- **`src/api/hooks.ts`** — React Query hooks (`useController`, `useJsonAll`, `useStationsMeta`, `useRunProgram`, `useManualStation`, …). Prefer the same patterns as existing widgets.
-- **`src/api/client.ts` / `src/api/types.ts`** — Lower-level client and shared types if you need something not wrapped by a hook yet.
+- **`src/api/hooks.ts`**: React Query hooks (`useController`, `useJsonAll`, `useStationsMeta`, `useRunProgram`, `useManualStation`, …). Prefer the same patterns as existing widgets.
+- **`src/api/client.ts` / `src/api/types.ts`**: lower-level client and shared types if you need something not wrapped by a hook yet.
 
 ### UI building blocks
 
-- **`src/components/ui/`** — `Card`, `Button`, `Input`, `Spinner`, `ErrorBox`, etc.
+- **`src/components/ui/`**: `Card`, `Button`, `Input`, `Spinner`, `ErrorBox`, etc.
 
 ### Shared dashboard helpers
 
-- **`src/components/widgets/dashboardShared.ts`** — Re-exported from `index.ts` for bits like program/zone helpers used by multiple tiles.
+- **`src/components/widgets/dashboardShared.ts`**: re-exported from `index.ts` for bits like program/zone helpers used by multiple tiles.
 
 ### Styling
 
@@ -79,11 +79,11 @@ Layouts live in **`localStorage`** under keys such as `hydrodash.dashboardRglLay
 
 ### Drag-and-drop
 
-Do not remove or cover the grip that uses **`RGL_DRAG_HANDLE_CLASS`** — it is required for reordering. Interactive controls should live in the card body; the dashboard passes **`cancel: 'input, select, textarea, button, a'`** so dragging does not start from those elements.
+Do not remove or cover the grip that uses **`RGL_DRAG_HANDLE_CLASS`**. It is required for reordering. Interactive controls should live in the card body; the dashboard passes **`cancel: 'input, select, textarea, button, a'`** so dragging does not start from those elements.
 
 ## 5. Quality checks before you open a PR
 
-From **`HydroDash/`** (repository root — where you run the dev server):
+From **`HydroDash/`** (repository root, where you run the dev server):
 
 ```bash
 npm run lint

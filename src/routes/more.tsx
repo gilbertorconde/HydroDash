@@ -84,6 +84,7 @@ function MoreRoute() {
           <NotificationsSettingsModal
             onClose={() => setNotifOpen(false)}
             initial={notifConfig.data?.settings ?? null}
+            pushConfigured={notifConfig.data?.pushEnabled ?? false}
           />
         ) : null}
 

@@ -21,7 +21,7 @@ Independent modern frontend for OpenSprinkler controllers. The npm package name 
 
 ### Zones
 
-![HydroDash zones — manual runs per zone](docs/screenshot-zones.png)
+![HydroDash zones: manual runs per zone](docs/screenshot-zones.png)
 
 ### Programs
 
@@ -123,7 +123,7 @@ docker compose up
 
 **`hydrodash`** and **`hydrodash-notify`** share the same image (`command: node dist/notifications-service.mjs` on notify). **MariaDB** is **`mariadb:11`**. The web UI is exposed as **`8080:4173`**. **`DATABASE_URL`** and **`DATABASE_SCHEMA_URL`** are composed in YAML from **`MARIADB_*`** (no separate `DATABASE_*` keys in `.env` for Compose).
 
-There is **no reverse proxy** in Compose—use your own TLS/edge proxy in front if you need HTTPS or a single public hostname; see **[Reverse proxy (optional)](docs/environment.md#reverse-proxy-optional)** in `docs/environment.md` and the sample [`docker/nginx.conf`](docker/nginx.conf).
+There is **no reverse proxy** in Compose. Use your own TLS/edge proxy in front if you need HTTPS or a single public hostname; see **[Reverse proxy (optional)](docs/environment.md#reverse-proxy-optional)** in `docs/environment.md` and the sample [`docker/nginx.conf`](docker/nginx.conf).
 
 To run **your own build** instead of the published image, use the [single-container](#single-container-node-only) flow, or change the `image:` lines in `docker-compose.yml` (e.g. to a local tag after `docker build -t …`, or another registry if you fork and publish your own package).
 

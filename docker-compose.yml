@@ -55,8 +55,6 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
-    expose:
-      - '8081'
     restart: unless-stopped
 
 volumes:

@@ -189,6 +189,33 @@ export function useNotificationsSaveSettings() {
   })
 }
 
+export type NotificationsTestResult = {
+  ok: boolean
+  push: 'skipped' | 'ok' | 'failed'
+  pushConfigured: boolean
+}
+
+export function useNotificationsTest() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const res = await fetch('/api/notifications/test', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      })
+      const j = (await res.json().catch(() => ({}))) as NotificationsTestResult & { error?: string }
+      if (!res.ok) throw new Error(j.error || 'Test failed')
+      return j
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.notificationsInbox(50) })
+      qc.invalidateQueries({ queryKey: qk.notificationsInbox(100) })
+      qc.invalidateQueries({ queryKey: qk.notificationsUnread() })
+    },
+  })
+}
+
 export function useJsonAll(options?: Partial<UseQueryOptions<JsonAll>>) {
   return useQuery({
     queryKey: qk.ja(),

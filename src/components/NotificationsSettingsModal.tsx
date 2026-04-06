@@ -10,12 +10,14 @@ import {
   type NotificationSettingsJson,
 } from '../server/notifications/types'
 import { Button, ErrorBox, Input, Label } from './ui'
-import { useNotificationsSaveSettings } from '../api/hooks'
+import { useNotificationsSaveSettings, useNotificationsTest } from '../api/hooks'
 import styles from './NotificationsSettingsModal.module.css'
 
 type Props = {
   onClose: () => void
   initial: NotificationSettingsJson | null
+  /** From server config; push uses persisted settings + NTFY_SERVER_URL. */
+  pushConfigured?: boolean
 }
 
 function serviceEnabledLocal(settings: NotificationSettingsJson, key: NotificationServiceKey): boolean {
@@ -24,8 +26,9 @@ function serviceEnabledLocal(settings: NotificationSettingsJson, key: Notificati
   return DEFAULT_SERVICE_ENABLED[key]
 }
 
-export function NotificationsSettingsModal({ onClose, initial }: Props) {
+export function NotificationsSettingsModal({ onClose, initial, pushConfigured }: Props) {
   const save = useNotificationsSaveSettings()
+  const testNotify = useNotificationsTest()
   const [settings, setSettings] = useState<NotificationSettingsJson>(() =>
     initial ? mergeNotificationSettings(initial) : defaultSettingsJson(),
   )
@@ -89,6 +92,38 @@ export function NotificationsSettingsModal({ onClose, initial }: Props) {
               ))}
             </div>
           </div>
+
+          <div className={styles.testBlock}>
+            <div className={styles.testCopy}>
+              <span className={styles.fieldLabel}>Try it</span>
+              <p className={styles.testHint}>
+                Inserts a test row in the inbox
+                {pushConfigured ? ' and sends your default ntfy topic.' : ' (push requires NTFY_SERVER_URL on the server).'}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={testNotify.isPending}
+              onClick={() => testNotify.mutate()}
+            >
+              {testNotify.isPending ? 'Sending…' : 'Send test notification'}
+            </Button>
+          </div>
+          {testNotify.isError ? (
+            <ErrorBox
+              message={testNotify.error instanceof Error ? testNotify.error.message : 'Test failed'}
+            />
+          ) : null}
+          {testNotify.isSuccess && testNotify.data ? (
+            <p className={styles.testResult} role="status">
+              {testNotify.data.push === 'skipped' &&
+                'Saved to inbox. Push is not configured on the server.'}
+              {testNotify.data.push === 'ok' && 'Saved to inbox and push sent to ntfy.'}
+              {testNotify.data.push === 'failed' &&
+                'Saved to inbox. Push was attempted but ntfy did not accept the message.'}
+            </p>
+          ) : null}
 
           {save.isError ? (
             <ErrorBox message={save.error instanceof Error ? save.error.message : 'Save failed'} />

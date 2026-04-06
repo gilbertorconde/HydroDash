@@ -1,4 +1,4 @@
-# HydroDash — TanStack Start (Vite SSR). Production serves the built app with `vite preview`.
+# HydroDash: TanStack Start (Vite SSR). Production serves the built app with `vite preview`.
 FROM node:22-alpine AS builder
 WORKDIR /app
 
