@@ -46,7 +46,7 @@ export function SchedulePreviewPage() {
       <h1 className={styles.title}>Schedule preview</h1>
       <p className={styles.lead}>
         Approximate starts for one calendar day (weekly, single, monthly programs). Sun-relative start
-        times use today&apos;s sunrise/sunset minutes from <code>/jc</code> (
+        times use today&apos;s sunrise/sunset from the controller (
         {formatMinutesWall(Number(jc.data?.sunrise ?? 0), prefs.is24Hour)}–
         {formatMinutesWall(Number(jc.data?.sunset ?? 0), prefs.is24Hour)}).
       </p>

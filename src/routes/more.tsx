@@ -19,7 +19,7 @@ const links = [
   {
     to: '/preview',
     title: 'Schedule preview',
-    desc: 'Approximate program starts for a single day (simplified vs official app timeline).',
+    desc: 'Approximate program starts for a single day (simplified timeline).',
   },
   {
     to: '/sites',
@@ -29,12 +29,17 @@ const links = [
   {
     to: '/diagnostics',
     title: 'Diagnostics',
-    desc: 'Raw /db JSON for troubleshooting.',
+    desc: 'Technical debug dump from the controller for troubleshooting.',
   },
   {
     to: '/about',
     title: 'About',
     desc: 'What HydroDash is and how it relates to OpenSprinkler.',
+  },
+  {
+    to: '/backup',
+    title: 'Configuration backup',
+    desc: 'Export or import full controller configuration and HydroDash app settings for this browser.',
   },
 ] as const
 
@@ -91,7 +96,6 @@ function MoreRoute() {
         <h2 className={styles.sectionTitle}>Not in HydroDash yet</h2>
         <Card title="Roadmap-style gaps">
           <ul className={styles.longTail}>
-            <li>Configuration import / export (OpenSprinkler-App parity)</li>
             <li>Firmware OTA checks and update flow</li>
             <li>Analog sensor charts and configuration</li>
             <li>Localization (i18n) and locale files</li>

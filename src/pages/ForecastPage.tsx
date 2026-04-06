@@ -24,8 +24,8 @@ function renderWtdata(wt: unknown): ReactNode {
       <>
         <span>—</span>
         <p className={styles.hint}>
-          No <code>wtdata</code> on this <code>/jc</code> response. If your firmware is current, try a full page reload;
-          otherwise the field may be omitted until the first weather response.
+          No live weather payload yet. If your firmware is current, try a full page reload; otherwise
+          readings may appear only after the controller gets a successful response from the weather service.
         </p>
       </>
     )
@@ -35,10 +35,9 @@ function renderWtdata(wt: unknown): ReactNode {
       <>
         <pre className={styles.pre}>{'{}'}</pre>
         <p className={styles.hint}>
-          A weather <strong>provider</strong> in <code>wto</code> only selects how the script behaves. Actual readings
-          appear here only after your <strong>weather service URL</strong> returns a successful response that includes{' '}
-          <code>rawData</code> (JSON) for the firmware to embed. If checks fail, see <strong>Weather error code</strong>{' '}
-          and last-check times below.
+          Choosing a provider only configures how the weather script runs. Readings show up here after your{' '}
+          <strong>weather service URL</strong> returns a successful response the firmware can use. If checks fail,
+          use the error code and last-check times below.
         </p>
       </>
     )
@@ -101,9 +100,9 @@ export function ForecastPage() {
     <div>
       <h1 className={styles.title}>Weather & forecast</h1>
       <p className={styles.lead}>
-        Provider and keys live in <code>wto</code> (below). Live readings in <code>wtdata</code> are filled only when the
-        controller successfully calls your <strong>weather service URL</strong> and the script returns{' '}
-        <code>rawData</code> — not from configuration alone.
+        Provider and API keys are saved on the device (form below). Live readings appear only after the
+        controller successfully calls your <strong>weather service URL</strong> and receives usable data, not from
+        configuration alone.
       </p>
       {err ? <ErrorBox message={err} /> : null}
       {msg ? <p className={styles.ok}>{msg}</p> : null}
@@ -132,14 +131,14 @@ export function ForecastPage() {
                 {wterr < 0
                   ? ' The controller could not complete the HTTP call to your weather service URL (network, timeout, or empty body).'
                   : wterr === 99
-                    ? ' The weather script returned a generic failure (often an upstream provider or internal server issue). Confirm location, API key, and provider in OG “Verify”; check OpenSprinkler forums if it persists.'
+                    ? ' The weather script returned a generic failure (often an upstream provider or internal server issue). Confirm location, API key, and provider on the device, then try again.'
                     : ' The weather script returned this errCode in its response (see label above).'}
               </span>
             ) : null}
           </dd>
           <dt>Weather restricted</dt>
           <dd>{jc.data?.wtrestr != null ? String(jc.data.wtrestr) : '—'}</dd>
-          <dt>wtdata</dt>
+          <dt>Live weather payload</dt>
           <dd>{renderWtdata(wtdata)}</dd>
         </dl>
       </Card>
@@ -178,8 +177,8 @@ export function ForecastPage() {
           Save provider to controller
         </Button>
         <p className={styles.hint}>
-          Advanced fields stay in the JSON blob; this form updates <code>provider</code> and{' '}
-          <code>key</code> only. Tune water level and location under Settings.
+          This form only updates provider and API key. Other weather fields stay as stored on the device; tune
+          water level and location under Settings.
         </p>
       </Card>
     </div>

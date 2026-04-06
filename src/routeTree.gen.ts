@@ -22,6 +22,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as ForecastRouteImport } from './routes/forecast'
 import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
+import { Route as BackupRouteImport } from './routes/backup'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiOsSplatRouteImport } from './routes/api/os/$'
@@ -101,6 +102,11 @@ const DiagnosticsRoute = DiagnosticsRouteImport.update({
   path: '/diagnostics',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BackupRoute = BackupRouteImport.update({
+  id: '/backup',
+  path: '/backup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
@@ -173,6 +179,7 @@ const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/backup': typeof BackupRoute
   '/diagnostics': typeof DiagnosticsRoute
   '/forecast': typeof ForecastRoute
   '/history': typeof HistoryRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/backup': typeof BackupRoute
   '/diagnostics': typeof DiagnosticsRoute
   '/forecast': typeof ForecastRoute
   '/history': typeof HistoryRoute
@@ -230,6 +238,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/backup': typeof BackupRoute
   '/diagnostics': typeof DiagnosticsRoute
   '/forecast': typeof ForecastRoute
   '/history': typeof HistoryRoute
@@ -260,6 +269,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/backup'
     | '/diagnostics'
     | '/forecast'
     | '/history'
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/backup'
     | '/diagnostics'
     | '/forecast'
     | '/history'
@@ -316,6 +327,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/backup'
     | '/diagnostics'
     | '/forecast'
     | '/history'
@@ -345,6 +357,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  BackupRoute: typeof BackupRoute
   DiagnosticsRoute: typeof DiagnosticsRoute
   ForecastRoute: typeof ForecastRoute
   HistoryRoute: typeof HistoryRoute
@@ -464,6 +477,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DiagnosticsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/backup': {
+      id: '/backup'
+      path: '/backup'
+      fullPath: '/backup'
+      preLoaderRoute: typeof BackupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -561,6 +581,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  BackupRoute: BackupRoute,
   DiagnosticsRoute: DiagnosticsRoute,
   ForecastRoute: ForecastRoute,
   HistoryRoute: HistoryRoute,

@@ -1,0 +1,124 @@
+.page {
+  max-width: 44rem;
+  padding-bottom: var(--space-xl);
+}
+
+.title {
+  font-size: var(--text-title);
+  margin: 0 0 var(--space-md);
+  font-weight: 800;
+}
+
+.backLink {
+  display: inline-block;
+  margin: 0 0 var(--space-md);
+  font-size: 0.9rem;
+}
+
+.intro {
+  margin: 0 0 var(--space-xl);
+}
+
+.introPara {
+  margin: 0 0 var(--space-md);
+  color: var(--color-muted);
+  font-size: var(--text-body);
+  line-height: 1.65;
+  max-width: 42rem;
+}
+
+.introPara:last-child {
+  margin-bottom: 0;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.cardBodyLoose {
+  padding-top: 1.15rem !important;
+  padding-bottom: 1.25rem !important;
+}
+
+.subheading {
+  margin: 0 0 var(--space-sm);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted);
+}
+
+.subheadingSpaced {
+  margin-top: var(--space-lg);
+}
+
+.bulletList {
+  margin: 0 0 var(--space-lg);
+  padding-left: 1.2rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.bulletList li {
+  margin-bottom: 0.5rem;
+}
+
+.bulletList li:last-child {
+  margin-bottom: 0;
+}
+
+.exportDesc {
+  margin: 0 0 var(--space-md);
+  font-size: 0.84rem;
+  line-height: 1.58;
+  color: var(--color-muted);
+  max-width: 38rem;
+}
+
+.importIntro {
+  margin: 0 0 var(--space-md);
+  font-size: 0.84rem;
+  line-height: 1.58;
+  color: var(--color-muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
+.actionsCol {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.hiddenFile {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.feedback {
+  margin-top: var(--space-md);
+}
+
+.feedback > * + * {
+  margin-top: var(--space-sm);
+}
+
+.ok {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--color-ok, #2a9d8f);
+  line-height: 1.5;
+}

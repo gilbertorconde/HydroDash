@@ -14,15 +14,15 @@ Let users back up and restore controller configuration (programs, stations, opti
 
 ### Current state in HydroDash
 
-- Settings and other pages already **read** consolidated state via `/ja` and **write** slices via `/jo` (and related commands) through the existing API proxy (`/api/os/...`).
-- There is **no** single “export all” or “import from file” flow, no download/upload UI, and no documented schema for a portable backup blob.
-- **History** can export parsed log data as JSON from the History page; that is **log** export only, not full configuration.
+- **More → Configuration backup** (`/backup`): exports the active controller as **`/ja`-shaped JSON** (OpenSprinkler app compatible) and imports from the same shape using a sequential **`/co` → `/cs` → `/dp` (delete all programs) → `/cs` (names) → `/cp`** flow aligned with OpenSprinkler-App `import-export.js`. Pre-2.1 program encodings are rejected with guidance to round-trip via the official app.
+- A second section on that page exports/imports **HydroDash app** local state (preferences, theme, dashboard layout keys in `localStorage`).
+- **History** still has separate log JSON export only.
 
 ### Gaps
 
-- Define the **exact payload shape** to match (or subset of) what OpenSprinkler-App exports, or document an intentional HydroDash-specific format with a version field.
-- **Import** must validate structure, show a clear preview or diff summary, and apply writes in a safe order (options vs stations vs programs) with rollback or clear failure reporting.
-- **Multi-site** (`OS_SITES`): decide whether backups are per-site and how filenames or metadata identify the target controller.
+- No **preview / diff** before import; **rollback** is not automatic if a step fails mid-sequence.
+- **OSPi** and some legacy firmware branches in the official importer are not replicated.
+- **Multi-site**: backups are implicitly for whichever controller is **active**; filenames do not embed site id (user can rename files).
 
 ### Technical requirements
 

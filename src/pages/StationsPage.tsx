@@ -485,12 +485,12 @@ export function StationsPage() {
                     {jeRow ? (
                       <>
                         <p className={styles.jeHint}>
-                          Special data from <code>/je</code> for this zone (RF / extension boards, etc.):
+                          Extension and RF payload for this zone (when the device provides it):
                         </p>
                         <pre className={styles.jePre}>{JSON.stringify(jeRow, null, 2)}</pre>
                       </>
                     ) : je.isSuccess && je.data && Object.keys(je.data).length > 0 ? (
-                      <p className={styles.jeHint}>No /je entry for this zone index.</p>
+                      <p className={styles.jeHint}>No extension payload for this zone.</p>
                     ) : null}
                   </div>
                 </details>

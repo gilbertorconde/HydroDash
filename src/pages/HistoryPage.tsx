@@ -213,7 +213,7 @@ export function HistoryPage() {
   return (
     <div className={styles.wrap}>
       <h1 className={styles.title}>History</h1>
-      <p className={styles.lead}>Irrigation log from the controller. Layout matches the OpenSprinkler app: table or timeline.</p>
+      <p className={styles.lead}>Irrigation log from the controller. Switch between table and timeline.</p>
 
       <div className={styles.viewToggle} role="tablist" aria-label="Log view">
         <button
