@@ -1,20 +1,3 @@
-.page {
-  max-width: 44rem;
-  padding-bottom: var(--space-xl);
-}
-
-.title {
-  font-size: var(--text-title);
-  margin: 0 0 var(--space-md);
-  font-weight: 800;
-}
-
-.backLink {
-  display: inline-block;
-  margin: 0 0 var(--space-md);
-  font-size: 0.9rem;
-}
-
 .intro {
   margin: 0 0 var(--space-xl);
 }

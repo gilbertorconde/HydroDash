@@ -7,6 +7,8 @@ import {
   useSensorReadNow,
   useSensorTypes,
 } from '../api/hooks'
+import { MoreSubpageLayout } from '../components/MoreSubpageLayout'
+import shell from '../components/MoreSubpageLayout.module.css'
 import { SensorEditorModal } from '../components/SensorEditorModal'
 import { Button, Card, ErrorBox, Spinner } from '../components/ui'
 import { formatEpochSecondsLocale } from '../lib/formatLocale'
@@ -144,18 +146,16 @@ export function AnalogSensorsPage() {
 
   if (sl.isPending) {
     return (
-      <div className={styles.page}>
-        <h1 className={styles.title}>Sensors</h1>
+      <MoreSubpageLayout title="Sensors">
         <Spinner />
-      </div>
+      </MoreSubpageLayout>
     )
   }
 
   if (sl.data?.kind === 'unsupported') {
     return (
-      <div className={styles.page}>
-        <h1 className={styles.title}>Sensors</h1>
-        <p className={styles.intro}>
+      <MoreSubpageLayout title="Sensors">
+        <p className={shell.lead}>
           Extended analog and logged sensors use an optional controller API. This device did not return a
           sensor list, so either the firmware build has no sensor stack or the request failed.
         </p>
@@ -167,7 +167,7 @@ export function AnalogSensorsPage() {
           </p>
           <p className={styles.unsupportedDetail}>{sl.data.message}</p>
         </Card>
-      </div>
+      </MoreSubpageLayout>
     )
   }
 
@@ -175,9 +175,8 @@ export function AnalogSensorsPage() {
   const count = listPayload?.count ?? sensorRows.length
 
   return (
-    <div className={styles.page}>
-      <h1 className={styles.title}>Sensors</h1>
-      <p className={styles.intro}>
+    <MoreSubpageLayout title="Sensors">
+      <p className={shell.lead}>
         Same sensor list, live values, log chart, read-now, and definition editor as the controller UI on
         firmware that implements the extended sensor API.
       </p>
@@ -368,6 +367,6 @@ export function AnalogSensorsPage() {
         nextNr={nextNr}
         types={sensorTypesList}
       />
-    </div>
+    </MoreSubpageLayout>
   )
 }

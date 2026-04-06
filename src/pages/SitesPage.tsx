@@ -1,4 +1,6 @@
 import { useAuthSession, useSwitchSite } from '../api/hooks'
+import { MoreSubpageLayout } from '../components/MoreSubpageLayout'
+import shell from '../components/MoreSubpageLayout.module.css'
 import { Card, Button, ErrorBox, Spinner } from '../components/ui'
 import styles from './SitesPage.module.css'
 
@@ -11,17 +13,15 @@ export function SitesPage() {
 
   if (auth.isLoading) {
     return (
-      <div>
-        <h1 className={styles.title}>Controllers</h1>
+      <MoreSubpageLayout title="Controllers">
         <Spinner />
-      </div>
+      </MoreSubpageLayout>
     )
   }
 
   return (
-    <div>
-      <h1 className={styles.title}>Controllers</h1>
-      <p className={styles.lead}>
+    <MoreSubpageLayout title="Controllers">
+      <p className={shell.lead}>
         When the server sets the <code>OS_SITES</code> environment variable to a JSON array of{' '}
         <code>{`{ "id", "baseUrl", "label?", "password?" }`}</code>, you can switch which OpenSprinkler
         device HydroDash proxies after login. Otherwise the app uses a single{' '}
@@ -66,6 +66,6 @@ export function SitesPage() {
           ) : null}
         </Card>
       )}
-    </div>
+    </MoreSubpageLayout>
   )
 }

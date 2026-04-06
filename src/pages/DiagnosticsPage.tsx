@@ -1,4 +1,6 @@
 import { useDebugInfo } from '../api/hooks'
+import { MoreSubpageLayout } from '../components/MoreSubpageLayout'
+import shell from '../components/MoreSubpageLayout.module.css'
 import { Card, ErrorBox, Spinner } from '../components/ui'
 import styles from './DiagnosticsPage.module.css'
 
@@ -6,9 +8,8 @@ export function DiagnosticsPage() {
   const db = useDebugInfo(true)
 
   return (
-    <div>
-      <h1 className={styles.title}>Diagnostics</h1>
-      <p className={styles.lead}>
+    <MoreSubpageLayout title="Diagnostics">
+      <p className={shell.lead}>
         Raw debug export from the controller (contents vary by firmware and build).
       </p>
       <Card title="Controller debug">
@@ -18,6 +19,6 @@ export function DiagnosticsPage() {
         ) : null}
         {db.data ? <pre className={styles.pre}>{JSON.stringify(db.data, null, 2)}</pre> : null}
       </Card>
-    </div>
+    </MoreSubpageLayout>
   )
 }

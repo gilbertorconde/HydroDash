@@ -17,13 +17,57 @@
   grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
   gap: var(--space-md);
   margin-bottom: var(--space-xl);
+  align-items: stretch;
 }
 
 .cardLink {
   text-decoration: none;
   color: inherit;
-  display: block;
-  height: 100%;
+  display: flex;
+  min-height: 100%;
+  border-radius: calc(var(--radius-md) + 3px);
+  cursor: pointer;
+}
+
+.cardLink:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent, var(--color-cta)) 55%, transparent);
+  outline-offset: 3px;
+}
+
+.cardLink:hover .tileCta {
+  text-decoration: underline;
+}
+
+.cardLink .tileCard {
+  margin-bottom: 0;
+}
+
+.tileShell {
+  display: flex;
+  min-height: 100%;
+}
+
+.tileShell .tileCard {
+  margin-bottom: 0;
+}
+
+.tileCard {
+  flex: 1;
+  width: 100%;
+  min-height: 7.25rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.tileCardMuted {
+  opacity: 0.92;
+}
+
+.tileBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
 }
 
 .cardDesc {
@@ -32,4 +76,32 @@
   line-height: 1.45;
   color: var(--color-muted);
   font-weight: 550;
+}
+
+.tileMeta {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.82rem;
+  font-weight: 750;
+  color: color-mix(in srgb, var(--color-accent, var(--color-cta)) 82%, var(--color-text));
+  padding-top: 0.4rem;
+}
+
+.tileMetaStatic {
+  margin-top: auto;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--color-muted);
+  padding-top: 0.4rem;
+}
+
+.tileChevron {
+  flex-shrink: 0;
+  opacity: 0.88;
+}
+
+.tileCta {
+  letter-spacing: 0.02em;
 }

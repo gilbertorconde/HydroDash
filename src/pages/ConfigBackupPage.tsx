@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
-import { Link } from '@tanstack/react-router'
 import { osCommand } from '../api/client'
 import { qk, useJsonAll } from '../api/hooks'
+import { MoreSubpageLayout } from '../components/MoreSubpageLayout'
 import { Button, Card, ErrorBox, Spinner } from '../components/ui'
 import { useAppPreferences } from '../lib/appPreferences'
 import {
@@ -125,12 +125,7 @@ export function ConfigBackupPage() {
   }
 
   return (
-    <div className={styles.page}>
-      <h1 className={styles.title}>Configuration backup</h1>
-      <Link to="/more" className={styles.backLink}>
-        Back to More
-      </Link>
-
+    <MoreSubpageLayout title="Configuration backup">
       <div className={styles.intro}>
         <p className={styles.introPara}>
           Export saves a full snapshot of programs, zones, and options from the controller.
@@ -278,6 +273,6 @@ export function ConfigBackupPage() {
           </div>
         </Card>
       </div>
-    </div>
+    </MoreSubpageLayout>
   )
 }

@@ -1,20 +1,25 @@
+import { MoreSubpageLayout } from '../components/MoreSubpageLayout'
 import { Card } from '../components/ui'
 import { HYDRODASH_LOGO_SVG_HEIGHT, HYDRODASH_LOGO_SVG_WIDTH } from '../lib/hydroDashLogo'
 import styles from './AboutPage.module.css'
 
 export function AboutPage() {
   return (
-    <div>
-      <h1 className={styles.title}>
-        <img
-          src="/hydroDashLogo.svg"
-          alt=""
-          className={styles.titleLogo}
-          width={HYDRODASH_LOGO_SVG_WIDTH}
-          height={HYDRODASH_LOGO_SVG_HEIGHT}
-        />
-        About
-      </h1>
+    <MoreSubpageLayout
+      title={
+        <>
+          <img
+            src="/hydroDashLogo.svg"
+            alt=""
+            className={styles.titleLogo}
+            width={HYDRODASH_LOGO_SVG_WIDTH}
+            height={HYDRODASH_LOGO_SVG_HEIGHT}
+          />
+          About
+        </>
+      }
+      titleClassName={styles.titleRow}
+    >
       <Card title="HydroDash">
         <p className={styles.p}>
           HydroDash is a web control surface for OpenSprinkler hardware, proxied through a small server
@@ -32,6 +37,6 @@ export function AboutPage() {
           here.
         </p>
       </Card>
-    </div>
+    </MoreSubpageLayout>
   )
 }

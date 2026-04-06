@@ -7,6 +7,8 @@ import { isoDateToEpochDays } from '../lib/osDate'
 import { formatMinutesWall } from '../lib/formatLocale'
 import { useAppPreferences } from '../lib/appPreferences'
 import { buildSchedulePreview } from '../lib/schedulePreview'
+import { MoreSubpageLayout } from '../components/MoreSubpageLayout'
+import shell from '../components/MoreSubpageLayout.module.css'
 import { Card, ErrorBox, Spinner } from '../components/ui'
 import styles from './SchedulePreviewPage.module.css'
 
@@ -42,9 +44,8 @@ export function SchedulePreviewPage() {
   )
 
   return (
-    <div>
-      <h1 className={styles.title}>Schedule preview</h1>
-      <p className={styles.lead}>
+    <MoreSubpageLayout title="Schedule preview">
+      <p className={shell.lead}>
         Approximate starts for one calendar day (weekly, single, monthly programs). Sun-relative start
         times use today&apos;s sunrise/sunset from the controller (
         {formatMinutesWall(Number(jc.data?.sunrise ?? 0), prefs.is24Hour)}–
@@ -152,6 +153,6 @@ export function SchedulePreviewPage() {
           </Link>
         </p>
       </Card>
-    </div>
+    </MoreSubpageLayout>
   )
 }

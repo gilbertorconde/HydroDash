@@ -1,0 +1,45 @@
+.shell {
+  max-width: 56rem;
+  margin: 0 auto;
+  padding-bottom: var(--space-xl);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin: 0 0 var(--space-md);
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--color-accent);
+  text-decoration: none;
+  width: fit-content;
+  border-radius: var(--radius-sm);
+  transition:
+    color 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.back:hover {
+  text-decoration: underline;
+}
+
+.back:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent, var(--color-cta)) 55%, transparent);
+  outline-offset: 2px;
+}
+
+.h1 {
+  font-size: var(--text-title);
+  margin: 0 0 var(--space-lg);
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.lead {
+  margin: 0 0 var(--space-lg);
+  color: var(--color-muted);
+  font-size: var(--text-body);
+  line-height: 1.55;
+  max-width: 48rem;
+}

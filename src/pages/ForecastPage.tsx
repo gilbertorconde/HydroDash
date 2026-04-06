@@ -7,6 +7,8 @@ import {
   providerById,
   wtoRecord,
 } from '../lib/weatherProviders'
+import { MoreSubpageLayout } from '../components/MoreSubpageLayout'
+import shell from '../components/MoreSubpageLayout.module.css'
 import { Card, Button, Input, Label, ErrorBox, Spinner } from '../components/ui'
 import { formatEpochSecondsLocale } from '../lib/formatLocale'
 import { useAppPreferences } from '../lib/appPreferences'
@@ -97,9 +99,8 @@ export function ForecastPage() {
   const loc = jc.data?.loc
 
   return (
-    <div>
-      <h1 className={styles.title}>Weather & forecast</h1>
-      <p className={styles.lead}>
+    <MoreSubpageLayout title="Weather & forecast">
+      <p className={shell.lead}>
         Provider and API keys are saved on the device (form below). Live readings appear only after the
         controller successfully calls your <strong>weather service URL</strong> and receives usable data, not from
         configuration alone.
@@ -181,6 +182,6 @@ export function ForecastPage() {
           water level and location under Settings.
         </p>
       </Card>
-    </div>
+    </MoreSubpageLayout>
   )
 }
