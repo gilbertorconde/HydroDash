@@ -18,6 +18,10 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+# vite preview + tanstackStart() still resolve router entry under src/ at config time (not only dist/).
+COPY --from=builder /app/src ./src
+COPY --from=builder /app/index.html ./
+COPY --from=builder /app/public ./public
 COPY vite.config.ts tsconfig.json tsconfig.node.json tsconfig.app.json ./
 
 EXPOSE 4173
