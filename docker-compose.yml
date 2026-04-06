@@ -33,6 +33,9 @@ services:
       HYDRODASH_LOGIN_PASSWORD: ${HYDRODASH_LOGIN_PASSWORD}
       HYDRODASH_SESSION_SECRET: ${HYDRODASH_SESSION_SECRET}
       PREVIEW_ALLOWED_HOSTS: ${PREVIEW_ALLOWED_HOSTS}
+      # Required on this service for “Send test notification” and for pushEnabled in the UI; worker uses its own copy below.
+      NTFY_SERVER_URL: ${NTFY_SERVER_URL}
+      NTFY_ACCESS_TOKEN: ${NTFY_ACCESS_TOKEN}
     ports:
       - '8080:4173'
     depends_on:
@@ -52,6 +55,8 @@ services:
       OS_PASSWORD: ${OS_PASSWORD}
       OS_PW_HASH: ${OS_PW_HASH}
       HYDRODASH_SESSION_SECRET: ${HYDRODASH_SESSION_SECRET}
+      NTFY_SERVER_URL: ${NTFY_SERVER_URL}
+      NTFY_ACCESS_TOKEN: ${NTFY_ACCESS_TOKEN}
     depends_on:
       mariadb:
         condition: service_healthy

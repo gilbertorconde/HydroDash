@@ -2,7 +2,7 @@
 
 HydroDash reads configuration from the environment. **`docker-compose.yml`** passes **`${VAR_NAME}`** references only (no default values in YAML). Docker Compose substitutes them from a **`.env`** file next to the compose file or from your shell. See [`.env.example`](../.env.example) for names to define.
 
-Optional settings (ntfy, notification worker tuning, `VITE_*`, `OS_SITES`, …) are **not** listed in Compose. Add `KEY: ${KEY}` under `environment:` when you need them; this document describes each variable.
+Optional settings (`VITE_*`, `OS_SITES`, extra worker tuning, …) may be **missing** from Compose. Add `KEY: ${KEY}` under `environment:` when you need them; this document describes each variable. **`NTFY_SERVER_URL`** / **`NTFY_ACCESS_TOKEN`** are already wired for **`hydrodash`** and **`hydrodash-notify`** (set them in `.env` to enable push).
 
 For **`npm run dev`** / **`npm run build`**, the same **`.env`** supplies Vite and the dev server.
 
@@ -16,7 +16,7 @@ Optional tuning variables used only by Node may fall back to defaults **in code*
 
 The **`hydrodash`** service maps **`8080:4173`** (host → container). Edit `ports` if you want another host port.
 
-`hydrodash` and **`hydrodash-notify`** duplicate the same OpenSprinkler variables where both need them; the notify service does **not** set `HYDRODASH_LOGIN_PASSWORD` (worker only). There is **no** `env_file:` on services; only **`${VAR}` interpolation** applies when Compose parses the file.
+`hydrodash` and **`hydrodash-notify`** duplicate the same OpenSprinkler variables where both need them; the notify service does **not** set `HYDRODASH_LOGIN_PASSWORD` (worker only). Both app containers receive **`NTFY_SERVER_URL`** and **`NTFY_ACCESS_TOKEN`** from `.env` (empty = no ntfy push). The web app needs **`NTFY_SERVER_URL`** for the inbox test button and for **`pushEnabled`** in the UI. There is **no** `env_file:` on services; only **`${VAR}` interpolation** applies when Compose parses the file.
 
 **`DATABASE_URL`** and **`DATABASE_SCHEMA_URL`** are **assembled in `docker-compose.yml`** from **`MARIADB_*`** (same pattern as many stacks: app user URL + root URL for DDL). You do **not** set `DATABASE_URL` / `DATABASE_SCHEMA_URL` in `.env` for `docker compose up`. Hostname is **`mariadb`** (Compose service name), port **3306**.
 
@@ -91,7 +91,7 @@ See [MariaDB Docker environment variables](https://hub.docker.com/_/mariadb) for
 
 ## Notification worker (`hydrodash-notify` service)
 
-Compose passes the same composed `DATABASE_*` and OpenSprinkler variables as the web app. Add any of the following under `environment:` when you need them:
+Compose passes the same composed `DATABASE_*`, OpenSprinkler variables, and **`NTFY_*`** as the web app. Add any of the following worker-only variables under `environment:` in **`docker-compose.yml`** when you need them:
 
 | Variable | Required | Description |
 | -------- | -------- | ----------- |

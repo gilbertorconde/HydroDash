@@ -10,7 +10,7 @@ HydroDash can record controller events in MariaDB and optionally push them to [n
 
 ## Docker Compose
 
-[`docker-compose.yml`](../docker-compose.yml) **builds** `DATABASE_URL` and `DATABASE_SCHEMA_URL` from **`MARIADB_*`** (like Vaultwarden-style compose). Optional ntfy / worker tuning is in **[docs/environment.md](environment.md)**. Add `KEY: ${KEY}` under `environment:` when needed.
+[`docker-compose.yml`](../docker-compose.yml) **builds** `DATABASE_URL` and `DATABASE_SCHEMA_URL` from **`MARIADB_*`** (like Vaultwarden-style compose) and passes **`NTFY_*`** to both app containers when set in `.env`. Other worker tuning is in **[docs/environment.md](environment.md)** (add `KEY: ${KEY}` under `environment:` when needed).
 
 ## Environment variables
 
