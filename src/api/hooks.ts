@@ -174,8 +174,21 @@ export function useNotificationsMarkAllRead() {
       if (!res.ok) throw new Error('Mark read failed')
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qk.notificationsInbox(50) })
-      qc.invalidateQueries({ queryKey: qk.notificationsInbox(100) })
+      const now = new Date().toISOString()
+      qc.setQueryData(qk.notificationsUnread(), (prev) => {
+        if (prev && typeof prev === 'object' && 'enabled' in prev) {
+          return { ...prev, count: 0 }
+        }
+        return { count: 0, enabled: true }
+      })
+      qc.setQueriesData<NotificationInboxItem[]>(
+        { queryKey: [...qk.notifications(), 'inbox'] },
+        (items) =>
+          Array.isArray(items)
+            ? items.map((item) => (item.readAt ? item : { ...item, readAt: now }))
+            : items,
+      )
+      qc.invalidateQueries({ queryKey: [...qk.notifications(), 'inbox'] })
       qc.invalidateQueries({ queryKey: qk.notificationsUnread() })
     },
   })

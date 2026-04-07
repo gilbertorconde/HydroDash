@@ -29,6 +29,8 @@ CREATE TABLE IF NOT EXISTS notification_events (
   route VARCHAR(255) NOT NULL DEFAULT '/',
   read_at TIMESTAMP NULL DEFAULT NULL,
   ntfy_ok TINYINT(1) NOT NULL DEFAULT 0,
+  ntfy_topic VARCHAR(512) NULL,
+  ntfy_sequence_id VARCHAR(128) NULL,
   payload_json JSON NULL,
   INDEX idx_events_inbox (read_at, created_at DESC),
   INDEX idx_events_created (created_at)

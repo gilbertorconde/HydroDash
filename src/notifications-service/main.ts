@@ -19,6 +19,7 @@ import {
   loadPollerSnapshot,
   pruneOldNotificationEvents,
   savePollerSnapshot,
+  updateNotificationEventNtfyMeta,
 } from '../server/notifications/db'
 import {
   getNotificationsHealthPort,
@@ -85,27 +86,33 @@ async function processSite(
     const key = ev.key as NotificationServiceKey
     if (!isServiceEnabled(settings, key)) continue
 
-    let ntfyOk = false
-    if (ntfyBase) {
-      const topic = resolveNtfyTopic(settings, key, site.siteId)
-      ntfyOk = await postNtfy({
-        baseUrl: ntfyBase,
-        topic,
-        title: ev.title,
-        body: ev.body,
-        accessToken: ntfyToken,
-      })
-    }
-
-    await insertNotificationEvent(pool, {
+    const rowId = await insertNotificationEvent(pool, {
       siteId: site.siteId === 'default' ? null : site.siteId,
       serviceKey: key,
       title: ev.title,
       body: ev.body,
       route: ev.route,
-      ntfyOk,
+      ntfyOk: false,
       payload: ev.payload,
     })
+
+    const sequenceId = `hd${rowId}`
+    if (ntfyBase) {
+      const topic = resolveNtfyTopic(settings, key, site.siteId)
+      const ntfyOk = await postNtfy({
+        baseUrl: ntfyBase,
+        topic,
+        title: ev.title,
+        body: ev.body,
+        accessToken: ntfyToken,
+        sequenceId,
+      })
+      await updateNotificationEventNtfyMeta(pool, rowId, {
+        ntfyOk,
+        ntfyTopic: topic,
+        ntfySequenceId: sequenceId,
+      })
+    }
   }
 
   await savePollerSnapshot(pool, site.siteId, JSON.stringify(curr))

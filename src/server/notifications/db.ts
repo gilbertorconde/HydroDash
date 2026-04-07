@@ -1,4 +1,5 @@
 import mysql from 'mysql2/promise'
+import type { ResultSetHeader } from 'mysql2'
 import type { NotificationSettingsJson } from './types'
 import { defaultSettingsJson, mergeNotificationSettings } from './types'
 import { applyNotificationsSchema } from './schema'
@@ -68,9 +69,9 @@ export async function insertNotificationEvent(
     ntfyOk: boolean
     payload?: unknown
   },
-): Promise<void> {
+): Promise<number> {
   const payloadJson = input.payload !== undefined ? JSON.stringify(input.payload) : null
-  await pool.execute(
+  const [result] = await pool.execute<ResultSetHeader>(
     `INSERT INTO notification_events
      (site_id, service_key, title, body, route, ntfy_ok, payload_json)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -84,6 +85,36 @@ export async function insertNotificationEvent(
       payloadJson,
     ],
   )
+  return Number(result.insertId)
+}
+
+export async function updateNotificationEventNtfyMeta(
+  pool: mysql.Pool,
+  id: number,
+  input: { ntfyOk: boolean; ntfyTopic: string | null; ntfySequenceId: string | null },
+): Promise<void> {
+  await pool.execute(
+    `UPDATE notification_events
+     SET ntfy_ok = ?, ntfy_topic = ?, ntfy_sequence_id = ?
+     WHERE id = ?`,
+    [input.ntfyOk ? 1 : 0, input.ntfyTopic, input.ntfySequenceId, id],
+  )
+}
+
+export type NtfyClearTarget = { topic: string; sequenceId: string }
+
+/** Unread rows that were successfully pushed to ntfy with a sequence id (for PUT …/clear). */
+export async function listUnreadNtfyClearTargets(pool: mysql.Pool): Promise<NtfyClearTarget[]> {
+  const [rows] = await pool.query<mysql.RowDataPacket[]>(
+    `SELECT ntfy_topic, ntfy_sequence_id FROM notification_events
+     WHERE read_at IS NULL AND ntfy_ok = 1
+       AND ntfy_topic IS NOT NULL AND TRIM(ntfy_topic) != ''
+       AND ntfy_sequence_id IS NOT NULL AND TRIM(ntfy_sequence_id) != ''`,
+  )
+  return rows.map((r) => ({
+    topic: String(r.ntfy_topic).trim(),
+    sequenceId: String(r.ntfy_sequence_id).trim(),
+  }))
 }
 
 export async function listNotificationEvents(

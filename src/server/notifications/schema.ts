@@ -37,11 +37,24 @@ export async function applyNotificationsSchema(): Promise<void> {
         route VARCHAR(255) NOT NULL DEFAULT '/',
         read_at TIMESTAMP NULL DEFAULT NULL,
         ntfy_ok TINYINT(1) NOT NULL DEFAULT 0,
+        ntfy_topic VARCHAR(512) NULL,
+        ntfy_sequence_id VARCHAR(128) NULL,
         payload_json JSON NULL,
         INDEX idx_events_inbox (read_at, created_at DESC),
         INDEX idx_events_created (created_at)
       )
     `)
+    for (const stmt of [
+      'ALTER TABLE notification_events ADD COLUMN ntfy_topic VARCHAR(512) NULL',
+      'ALTER TABLE notification_events ADD COLUMN ntfy_sequence_id VARCHAR(128) NULL',
+    ]) {
+      try {
+        await conn.execute(stmt)
+      } catch (e: unknown) {
+        const code = (e as { code?: string })?.code
+        if (code !== 'ER_DUP_FIELDNAME') throw e
+      }
+    }
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS notification_poller_state (
         site_id VARCHAR(64) NOT NULL PRIMARY KEY,

@@ -5,6 +5,7 @@ import {
   insertNotificationEvent,
   loadNotificationSettings,
   ntfyPushConfigured,
+  updateNotificationEventNtfyMeta,
 } from '../../../server/notifications/db'
 import { assertNotificationsAuth } from '../../../server/notifications/apiAuth'
 import { postNtfy } from '../../../server/notifications/ntfy'
@@ -41,29 +42,36 @@ export const Route = createFileRoute('/api/notifications/test')({
         const ntfyBase = process.env.NTFY_SERVER_URL?.trim()
         const ntfyToken = process.env.NTFY_ACCESS_TOKEN?.trim()
 
-        let push: 'skipped' | 'ok' | 'failed' = 'skipped'
-        let ntfyOk = false
-        if (ntfyBase) {
-          push = 'failed'
-          ntfyOk = await postNtfy({
-            baseUrl: ntfyBase,
-            topic: testNtfyTopic(settings),
-            title,
-            body,
-            accessToken: ntfyToken,
-          })
-          if (ntfyOk) push = 'ok'
-        }
-
-        await insertNotificationEvent(pool, {
+        const topic = testNtfyTopic(settings)
+        const rowId = await insertNotificationEvent(pool, {
           siteId: null,
           serviceKey: 'manual_test',
           title,
           body,
           route,
-          ntfyOk,
+          ntfyOk: false,
           payload: { source: 'manual_test' },
         })
+        const sequenceId = `hd${rowId}`
+
+        let push: 'skipped' | 'ok' | 'failed' = 'skipped'
+        if (ntfyBase) {
+          push = 'failed'
+          const ntfyOk = await postNtfy({
+            baseUrl: ntfyBase,
+            topic,
+            title,
+            body,
+            accessToken: ntfyToken,
+            sequenceId,
+          })
+          await updateNotificationEventNtfyMeta(pool, rowId, {
+            ntfyOk,
+            ntfyTopic: topic,
+            ntfySequenceId: sequenceId,
+          })
+          if (ntfyOk) push = 'ok'
+        }
 
         return Response.json({
           ok: true,

@@ -23,14 +23,14 @@ export function NotificationsBell() {
   const unread = useNotificationsUnreadCount()
   const [open, setOpen] = useState(false)
   const inbox = useNotificationsInbox(50, open)
-  const markRead = useNotificationsMarkAllRead()
+  const { mutate: markAllRead } = useNotificationsMarkAllRead()
   const navigate = useNavigate()
   const wrapRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
-    markRead.mutate()
-  }, [open, markRead])
+    markAllRead()
+  }, [open, markAllRead])
 
   useEffect(() => {
     if (!open) return
