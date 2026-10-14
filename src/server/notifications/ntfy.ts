@@ -1,3 +1,5 @@
+const NTFY_TIMEOUT_MS = 10_000
+
 /** Post a message to ntfy. Does not throw on network errors — returns false. */
 export async function postNtfy(params: {
   baseUrl: string
@@ -26,6 +28,7 @@ export async function postNtfy(params: {
       method: 'POST',
       headers,
       body: params.body,
+      signal: AbortSignal.timeout(NTFY_TIMEOUT_MS),
     })
     return res.ok
   } catch {
@@ -49,7 +52,7 @@ export async function clearNtfyMessage(params: {
   if (token) headers.Authorization = `Bearer ${token}`
 
   try {
-    const res = await fetch(url, { method: 'PUT', headers })
+    const res = await fetch(url, { method: 'PUT', headers, signal: AbortSignal.timeout(NTFY_TIMEOUT_MS) })
     return res.ok
   } catch {
     return false

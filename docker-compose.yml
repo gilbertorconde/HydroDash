@@ -57,6 +57,13 @@ services:
       HYDRODASH_SESSION_SECRET: ${HYDRODASH_SESSION_SECRET}
       NTFY_SERVER_URL: ${NTFY_SERVER_URL}
       NTFY_ACCESS_TOKEN: ${NTFY_ACCESS_TOKEN}
+    healthcheck:
+      # Fails when the poll loop has not completed a tick recently (stuck worker).
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8081/health']
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     depends_on:
       mariadb:
         condition: service_healthy

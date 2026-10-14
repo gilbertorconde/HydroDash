@@ -164,13 +164,19 @@ export async function markAllNotificationsRead(pool: mysql.Pool): Promise<void> 
   await pool.execute('UPDATE notification_events SET read_at = CURRENT_TIMESTAMP WHERE read_at IS NULL')
 }
 
-export async function loadPollerSnapshot(pool: mysql.Pool, siteId: string): Promise<string | null> {
+/** Last saved snapshot and its age in seconds (computed in SQL to avoid timezone drift). */
+export async function loadPollerSnapshot(
+  pool: mysql.Pool,
+  siteId: string,
+): Promise<{ json: string; ageSec: number } | null> {
   const [rows] = await pool.query<mysql.RowDataPacket[]>(
-    'SELECT snapshot_json FROM notification_poller_state WHERE site_id = ? LIMIT 1',
+    `SELECT snapshot_json, TIMESTAMPDIFF(SECOND, updated_at, CURRENT_TIMESTAMP) AS age_sec
+     FROM notification_poller_state WHERE site_id = ? LIMIT 1`,
     [siteId],
   )
   const s = rows[0]?.snapshot_json
-  return typeof s === 'string' ? s : null
+  if (typeof s !== 'string') return null
+  return { json: s, ageSec: Math.max(0, Number(rows[0]?.age_sec) || 0) }
 }
 
 export async function savePollerSnapshot(pool: mysql.Pool, siteId: string, snapshotJson: string): Promise<void> {
