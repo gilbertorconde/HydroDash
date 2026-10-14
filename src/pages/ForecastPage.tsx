@@ -11,12 +11,12 @@ import {
   wtoRecord,
 } from '../lib/weatherProviders'
 import { MoreSubpageLayout } from '../components/MoreSubpageLayout'
+import { useToast } from '../components/toastContext'
 import {
   AdvancedSection,
   Button,
   Card,
   EmptyState,
-  ErrorBox,
   Field,
   Input,
   Pill,
@@ -188,6 +188,7 @@ export function ForecastPage() {
   const ja = useJsonAll()
   const co = useChangeOptions()
   const cv = useChangeValues()
+  const toast = useToast()
   const prefs = useAppPreferences()
 
   function formatUnixSec(sec: unknown): string {
@@ -197,8 +198,6 @@ export function ForecastPage() {
 
   const [provider, setProvider] = useState<string>('Apple')
   const [apiKey, setApiKey] = useState('')
-  const [msg, setMsg] = useState<string | null>(null)
-  const [err, setErr] = useState<string | null>(null)
 
   useEffect(() => {
     if (!jc.isSuccess) return
@@ -213,8 +212,6 @@ export function ForecastPage() {
   const needsKey = sel?.needsKey ?? false
 
   async function saveProvider() {
-    setErr(null)
-    setMsg(null)
     try {
       const prev = wtoRecord(jc.data?.wto)
       const next: Record<string, unknown> = { ...prev, provider }
@@ -224,22 +221,20 @@ export function ForecastPage() {
       await co.mutateAsync({
         wto: inner.slice(1, -1),
       } as unknown as Record<string, string | number>)
-      setMsg('Weather provider options saved to the controller.')
+      toast.success('Weather provider options saved to the controller.')
       void jc.refetch()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Save failed')
+      toast.error(e instanceof Error ? e.message : 'Save failed')
     }
   }
 
   async function setRainDelay(hours: number) {
-    setErr(null)
-    setMsg(null)
     try {
       await cv.mutateAsync({ rd: hours })
-      setMsg(hours > 0 ? `Rain delay set for ${hours} hours.` : 'Rain delay cleared.')
+      toast.success(hours > 0 ? `Rain delay set for ${hours} hours.` : 'Rain delay cleared.')
       void jc.refetch()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Could not change rain delay')
+      toast.error(e instanceof Error ? e.message : 'Could not change rain delay')
     }
   }
 
@@ -308,9 +303,6 @@ export function ForecastPage() {
         </div>
       }
     >
-      {err ? <ErrorBox message={err} /> : null}
-      {msg ? <p className={styles.ok}>{msg}</p> : null}
-
       <div className={styles.grid}>
         <div className={styles.col}>
           <Card

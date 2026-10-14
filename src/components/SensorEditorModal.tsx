@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Activity, X } from 'lucide-react'
 import { useSensorSave } from '../api/hooks'
 import { AdvancedSection, Button, ErrorBox, Field, Input, Select, Switch } from './ui'
+import { useToast } from './toastContext'
 import type { SensorTypeEntry } from '../lib/opensprinklerSensorsApi'
 import {
   ipv4StringToOsDec,
@@ -120,6 +121,7 @@ type Props = {
 
 export function SensorEditorModal({ open, onClose, mode, initialRow, nextNr, types }: Props) {
   const save = useSensorSave()
+  const toast = useToast()
   const [form, setForm] = useState<SensorFormState>(() => defaultForm(nextNr, types))
   // Reset the form each time the dialog opens (state adjusted during render, not in an effect).
   const [prevOpen, setPrevOpen] = useState(open)
@@ -146,9 +148,10 @@ export function SensorEditorModal({ open, onClose, mode, initialRow, nextNr, typ
   async function submit() {
     try {
       await save.mutateAsync(buildScParams(form))
+      toast.success(mode === 'new' ? 'Sensor added.' : 'Sensor saved.')
       onClose()
     } catch {
-      /* ErrorBox */
+      /* Shown in the dialog's ErrorBox so the form can be fixed. */
     }
   }
 

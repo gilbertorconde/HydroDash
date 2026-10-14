@@ -28,6 +28,7 @@ import {
   Switch,
 } from '../components/ui'
 import { useConfirm } from '../components/confirmContext'
+import { useToast } from '../components/toastContext'
 import { DurationInput } from '../components/DurationInput'
 import {
   CONTROLLER_ACTION_UI_TIMEOUT_MS,
@@ -137,6 +138,7 @@ export function StationsPage() {
   const changeStations = useChangeStations()
   const changeValues = useChangeValues()
   const confirm = useConfirm()
+  const toast = useToast()
   const pauseQueue = usePauseQueue()
 
   const snArr = useMemo(() => js.data?.sn ?? [], [js.data?.sn])
@@ -207,8 +209,6 @@ export function StationsPage() {
   ])
 
   const [durations, setDurations] = useState<Record<number, number>>({})
-  const [actionMsg, setActionMsg] = useState<string | null>(null)
-  const [actionErr, setActionErr] = useState<string | null>(null)
   const [startingSid, setStartingSid] = useState<number | null>(null)
   /** Zone whose "Rename & details" sheet is open. */
   const [editSid, setEditSid] = useState<number | null>(null)
@@ -243,14 +243,12 @@ export function StationsPage() {
 
   /** Runs a controller action and reports it; resolves to whether it succeeded. */
   async function runAction(task: () => Promise<unknown>, successMessage: string): Promise<boolean> {
-    setActionErr(null)
-    setActionMsg(null)
     try {
       await task()
-      setActionMsg(successMessage)
+      toast.success(successMessage)
       return true
     } catch (e) {
-      setActionErr(e instanceof Error ? e.message : 'Zone action failed')
+      toast.error(e instanceof Error ? e.message : 'Zone action failed')
       return false
     }
   }
@@ -341,12 +339,6 @@ export function StationsPage() {
       />
       <PageBody>
         {errMsg ? <ErrorBox message={errMsg} /> : null}
-        {actionErr ? <ErrorBox message={actionErr} /> : null}
-        {actionMsg ? (
-          <p className={styles.ok} role="status">
-            {actionMsg}
-          </p>
-        ) : null}
         {loading ? <Spinner /> : null}
         {!loading && zoneRows.length === 0 && n > 0 ? (
           <EmptyState

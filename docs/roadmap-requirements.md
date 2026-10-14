@@ -1,6 +1,6 @@
 # Roadmap requirements
 
-This document expands the **“Not in HydroDash yet”** list on the **More** page (`/more`) into planning notes: what exists today, what is missing, and what to build or research before implementation.
+Planning notes for larger features: what exists today, what is missing, and what to build or research before implementation. (This list used to be shown on the **More** page; it now lives only here.)
 
 It is **not** a committed delivery schedule; it is a requirements and dependency checklist for contributors.
 

@@ -1,13 +1,3 @@
-.ok {
-  margin: 0;
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-md);
-  background: var(--color-success-soft);
-  color: var(--color-success);
-  font-weight: 700;
-  font-size: var(--text-small);
-}
-
 /* Pulsing dot inside the "Watering now" hero pill. */
 .liveDot {
   width: 7px;

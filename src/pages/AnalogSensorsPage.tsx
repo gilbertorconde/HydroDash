@@ -23,6 +23,7 @@ import {
   Spinner,
 } from '../components/ui'
 import { useConfirm } from '../components/confirmContext'
+import { useToast } from '../components/toastContext'
 import { formatEpochSecondsLocale } from '../lib/formatLocale'
 import type { SensorDataEntry, SensorLogEntry } from '../lib/opensprinklerSensorsApi'
 import { sensorNumericData } from '../lib/opensprinklerSensorsApi'
@@ -160,6 +161,7 @@ export function AnalogSensorsPage() {
   const readNow = useSensorReadNow()
   const delSensor = useSensorDelete()
   const confirm = useConfirm()
+  const toast = useToast()
   const sensorTypesList = useMemo(() => sf.data?.sensorTypes ?? [], [sf.data])
 
   const [editorOpen, setEditorOpen] = useState(false)
@@ -278,9 +280,6 @@ export function AnalogSensorsPage() {
       {sf.isError ? (
         <ErrorBox message="Could not load sensor type list; you can still enter a numeric type when adding a sensor." />
       ) : null}
-      {delSensor.isError ? (
-        <ErrorBox message={delSensor.error instanceof Error ? delSensor.error.message : 'Delete failed'} />
-      ) : null}
 
       {sensorRows.length === 0 ? (
         <Card>
@@ -333,7 +332,10 @@ export function AnalogSensorsPage() {
                             tone: 'danger',
                           })
                           if (!ok) return
-                          delSensor.mutate(nr)
+                          delSensor.mutate(nr, {
+                            onSuccess: () => toast.success(`${name} removed.`),
+                            onError: (e) => toast.error(e instanceof Error ? e.message : 'Delete failed'),
+                          })
                         },
                       },
                     ]}

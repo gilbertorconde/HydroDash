@@ -22,37 +22,3 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
-
-/* Short-lived confirmation for controller actions; sits above the phone tab bar. */
-.toast {
-  position: fixed;
-  left: 50%;
-  bottom: calc(var(--tabbar-h) + 1.75rem + env(safe-area-inset-bottom));
-  z-index: 80;
-  transform: translateX(-50%);
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  max-width: calc(100vw - 2rem);
-  padding: 0.7rem 1.1rem;
-  border-radius: var(--radius-pill);
-  background: var(--color-text);
-  color: var(--color-surface);
-  font-size: 0.88rem;
-  font-weight: 700;
-  box-shadow: var(--shadow-lg);
-  animation: toastIn 0.2s ease-out;
-}
-
-@keyframes toastIn {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 8px);
-  }
-}
-
-@media (min-width: 900px) {
-  .toast {
-    bottom: 2rem;
-  }
-}

@@ -16,6 +16,7 @@ import {
   Spinner,
 } from '../components/ui'
 import { useConfirm } from '../components/confirmContext'
+import { useToast } from '../components/toastContext'
 import { formatEpochTimeHmsLocale, formatEpochSecondsLocale } from '../lib/formatLocale'
 import { useAppPreferences } from '../lib/appPreferences'
 import {
@@ -139,8 +140,6 @@ export function HistoryPage() {
   const [tableGroup, setTableGroup] = useState<'day' | 'station'>('day')
   /** The range/grouping options collapse to a one-line summary until "Change" is tapped. */
   const [optionsOpen, setOptionsOpen] = useState(false)
-  const [msg, setMsg] = useState<string | null>(null)
-  const [err, setErr] = useState<string | null>(null)
 
   const start = fromDateInputStart(fromDate)
   const end = fromDateInputEnd(toDate)
@@ -150,6 +149,7 @@ export function HistoryPage() {
   const deleteLog = useDeleteLog()
   const clearAllLogs = useClearAllLogs()
   const confirm = useConfirm()
+  const toast = useToast()
 
   const rawEntries = useMemo(() => (logs.data ?? []) as unknown[], [logs.data])
 
@@ -255,8 +255,6 @@ export function HistoryPage() {
   const optionsSummary = view === 'timeline' ? rangeSummary : `${rangeSummary} · by ${tableGroup}`
 
   const runClearAll = async () => {
-    setErr(null)
-    setMsg(null)
     const ok = await confirm({
       title: 'Clear all logs?',
       message: 'Every irrigation log entry on the controller is deleted. This cannot be undone.',
@@ -266,16 +264,14 @@ export function HistoryPage() {
     if (!ok) return
     try {
       await clearAllLogs.mutateAsync()
-      setMsg('All logs cleared.')
+      toast.success('All logs cleared.')
       logs.refetch()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to clear logs')
+      toast.error(e instanceof Error ? e.message : 'Failed to clear logs')
     }
   }
 
   const runDeleteDay = async (day: string) => {
-    setErr(null)
-    setMsg(null)
     const ok = await confirm({
       title: `Delete logs for ${day}?`,
       message: 'All log entries for this day are removed from the controller.',
@@ -285,10 +281,10 @@ export function HistoryPage() {
     if (!ok) return
     try {
       await deleteLog.mutateAsync(day)
-      setMsg(`Deleted logs for ${day}.`)
+      toast.success(`Deleted logs for ${day}.`)
       logs.refetch()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to delete logs')
+      toast.error(e instanceof Error ? e.message : 'Failed to delete logs')
     }
   }
 
@@ -453,8 +449,6 @@ export function HistoryPage() {
         </section>
 
         {!validRange ? <ErrorBox message="Date range is invalid. End must be on or after start." /> : null}
-        {err ? <ErrorBox message={err} /> : null}
-        {msg ? <p className={styles.ok}>{msg}</p> : null}
 
         <Card
           title={view === 'timeline' ? 'Timeline' : 'Runs'}

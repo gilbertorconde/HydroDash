@@ -112,11 +112,11 @@ import {
   Switch,
 } from '../components/ui'
 import { useConfirm } from '../components/confirmContext'
+import { useToast } from '../components/toastContext'
 import { DurationInput } from '../components/DurationInput'
 import {
   CalendarClock,
   CalendarDays,
-  CheckCircle2,
   Clock3,
   CloudSun,
   Droplets,
@@ -992,6 +992,7 @@ export function ProgramsPage() {
   const toggleUwt = useProgramUwt()
   const del = useDeleteProgram()
   const confirm = useConfirm()
+  const toast = useToast()
   const reorder = useReorderPrograms()
   const mp = useRunProgram()
   const cr = useRunOnce()
@@ -1045,8 +1046,8 @@ export function ProgramsPage() {
     () => false,
   )
   const [runDurs, setRunDurs] = useState<number[]>([])
-  const [actionMsg, setActionMsg] = useState<string | null>(null)
-  const [actionErr, setActionErr] = useState<string | null>(null)
+  /** Program editor validation message, shown inside the sheet. */
+  const [sheetErr, setSheetErr] = useState<string | null>(null)
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
 
   const runningProgramPids = useMemo(() => {
@@ -1112,8 +1113,7 @@ export function ProgramsPage() {
       progStartWatchdogRef.current = null
       setStartingProgramPid(null)
       setRunProgramPid(null)
-      setActionMsg(null)
-      setActionErr('Timed out waiting for the controller to report this program as running.')
+      toast.error('Timed out waiting for the controller to report this program as running.')
     }, CONTROLLER_ACTION_UI_TIMEOUT_MS)
     return () => {
       if (progStartWatchdogRef.current) {
@@ -1121,7 +1121,7 @@ export function ProgramsPage() {
         progStartWatchdogRef.current = null
       }
     }
-  }, [startingProgramPid])
+  }, [startingProgramPid, toast])
 
   const sortableIds = useMemo(() => pd.map((_, i) => String(i)), [pd])
   const sensors = useSensors(
@@ -1148,44 +1148,43 @@ export function ProgramsPage() {
 
   const err = pr.error instanceof Error ? pr.error.message : null
 
-  /** Runs a mutation, reporting success / failure in the page (and open sheet) banner. */
+  /** Runs a mutation, reporting success / failure as a toast. */
   async function runAction(task: () => Promise<unknown>, successMessage: string): Promise<boolean> {
-    setActionErr(null)
-    setActionMsg(null)
+    setSheetErr(null)
     try {
       await task()
-      setActionMsg(successMessage)
+      toast.success(successMessage)
       return true
     } catch (e) {
-      setActionErr(e instanceof Error ? e.message : 'Program action failed')
+      toast.error(e instanceof Error ? e.message : 'Program action failed')
       return false
     }
   }
 
   function closeEditor() {
     setEditor(null)
-    setActionErr(null)
+    setSheetErr(null)
   }
 
   async function saveEditor() {
     if (!editor) return
 
     if (editor.dayType === 'weekly' && !editor.weekdays.some(Boolean)) {
-      setActionErr('Select at least one weekday.')
+      setSheetErr('Select at least one weekday.')
       return
     }
     if (editor.dayType === 'interval') {
       if (editor.intervalEvery < 2 || editor.intervalEvery > 128) {
-        setActionErr('Interval must be between 2 and 128 days.')
+        setSheetErr('Interval must be between 2 and 128 days.')
         return
       }
       if (editor.intervalStarting < 0 || editor.intervalStarting >= editor.intervalEvery) {
-        setActionErr('"Starting in" must be from 0 up to (interval − 1).')
+        setSheetErr('"Starting in" must be from 0 up to (interval − 1).')
         return
       }
     }
     if (editor.dayType === 'monthly' && (editor.monthlyDay < 0 || editor.monthlyDay > 31)) {
-      setActionErr('Day of month must be 0 (last day) or 1–31.')
+      setSheetErr('Day of month must be 0 (last day) or 1–31.')
       return
     }
 
@@ -1193,7 +1192,7 @@ export function ProgramsPage() {
       (d, i) => d > 0 && !isStationDisabled(stnDis, i),
     )
     if (!atLeastOneEnabledZone) {
-      setActionErr('Set duration for at least one enabled zone.')
+      setSheetErr('Set duration for at least one enabled zone.')
       return
     }
 
@@ -1244,7 +1243,7 @@ export function ProgramsPage() {
         editor.fixedSlotOn[2] ? pickToToken(editor.fixedPick3) : START_DISABLED,
       ]
       if (starts.every((v) => isStartDisabled(v))) {
-        setActionErr('Enable at least one start time (including the first).')
+        setSheetErr('Enable at least one start time (including the first).')
         return
       }
     }
@@ -1276,7 +1275,7 @@ export function ProgramsPage() {
       () => save.mutateAsync(payload),
       editor.pid >= 0 ? 'Program saved.' : 'Program created.',
     )
-    // Keep the sheet open on failure so the edits are not lost; the error shows inside it.
+    // Keep the sheet open on failure so the edits are not lost; the error shows as a toast.
     if (ok) setEditor(null)
   }
 
@@ -1306,8 +1305,7 @@ export function ProgramsPage() {
       ? 'No programs yet'
       : [`${enabledCount} active`, nextLabel ? `next: ${nextLabel}` : null].filter(Boolean).join(' · ')
 
-  const sheetOpen = editor !== null || runOnceOpen || runProgramPid !== null
-  const sheetBanner = actionErr ? <ErrorBox message={actionErr} /> : null
+  const sheetBanner = sheetErr ? <ErrorBox message={sheetErr} /> : null
   const runProgramRow = runProgramPid !== null ? pd[runProgramPid] : undefined
   const runProgramName =
     runProgramPid !== null ? runProgramRow?.[5] || `Program ${runProgramPid + 1}` : ''
@@ -1334,7 +1332,7 @@ export function ProgramsPage() {
               variant="light"
               startIcon={<Plus size={17} aria-hidden />}
               onClick={() => {
-                setActionErr(null)
+                setSheetErr(null)
                 setEditor(createEditorState(null, -1, nSta))
               }}
             >
@@ -1344,7 +1342,6 @@ export function ProgramsPage() {
               variant="glass"
               startIcon={<Play size={16} aria-hidden />}
               onClick={() => {
-                setActionErr(null)
                 setRunOnceQo(2)
                 setRunOnceUwt(0)
                 setRunOnceOpen(true)
@@ -1364,13 +1361,6 @@ export function ProgramsPage() {
       />
       <PageBody>
         {err ? <ErrorBox message={err} /> : null}
-        {!sheetOpen && actionErr ? <ErrorBox message={actionErr} /> : null}
-        {actionMsg ? (
-          <p className={styles.ok} role="status">
-            <CheckCircle2 size={17} aria-hidden />
-            {actionMsg}
-          </p>
-        ) : null}
         {pr.isLoading ? (
           <div className={styles.loading}>
             <Spinner />
@@ -1432,14 +1422,12 @@ export function ProgramsPage() {
             })
             setActiveDragId(null)
 
-            setActionErr(null)
-            setActionMsg(null)
             try {
               await reorder.mutateAsync({ from: oldIndex, to: newIndex })
-              setActionMsg('Programs reordered.')
+              toast.success('Programs reordered.')
             } catch (err) {
               if (previous !== undefined) qc.setQueryData(jpKey, previous)
-              setActionErr(err instanceof Error ? err.message : 'Program action failed')
+              toast.error(err instanceof Error ? err.message : 'Program action failed')
             }
           }}
         >
@@ -1456,7 +1444,7 @@ export function ProgramsPage() {
                   stnDis={stnDis}
                   nSta={nSta}
                   setEditor={(next) => {
-                    setActionErr(null)
+                    setSheetErr(null)
                     setEditor(next)
                   }}
                   toggleEn={toggleEn}
@@ -1477,7 +1465,6 @@ export function ProgramsPage() {
                   onRunNow={(pid) => {
                     const row = pd[pid]
                     const uwt = row ? (flagUseWeather(row[0]) ? 1 : 0) : 1
-                    setActionErr(null)
                     setRunProgQo(2)
                     setRunProgUwt(uwt)
                     setRunProgramPid(pid)
@@ -1546,7 +1533,6 @@ export function ProgramsPage() {
             </>
           }
         >
-          {sheetBanner}
           {runProgramRow ? (
             <p className={styles.sheetLead}>
               Scheduled {summarizeStarts(runProgramRow[3], flagFixedStart(runProgramRow[0]), prefs.is24Hour)} ·{' '}
@@ -1609,7 +1595,6 @@ export function ProgramsPage() {
             </>
           }
         >
-          {sheetBanner}
           <div className={styles.switchCard}>
             <Switch
               checked={runOnceUwt === 1}

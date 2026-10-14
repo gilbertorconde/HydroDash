@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { CheckCircle2 } from 'lucide-react'
 import {
   useController,
   useJsonAll,
@@ -17,6 +16,7 @@ import type { JsonAll, ProgramRow } from '../api/types'
 import { OpenSprinklerApiError, OpenSprinklerHttpError } from '../api/client'
 import { ErrorBox, PageBody } from '../components/ui'
 import { useConfirm } from '../components/confirmContext'
+import { useToast } from '../components/toastContext'
 import { useAppPreferences } from '../lib/appPreferences'
 import {
   HOME_WIDE_CARDS,
@@ -67,6 +67,7 @@ export function DashboardPage() {
   const cv = useChangeValues()
   const pq = usePauseQueue()
   const confirm = useConfirm()
+  const toast = useToast()
   const runProgram = useRunProgram()
   const manual = useManualStation()
   const js = useStationStatus(5000)
@@ -247,24 +248,13 @@ export function DashboardPage() {
   const providerLabel = providerById(providerId)?.name ?? providerId
   const weatherServiceRunning = weatherServiceNameFromWtdata(jc.data?.wtdata ?? jaSettings?.wtdata)
 
-  const [actionMsg, setActionMsg] = useState<string | null>(null)
-  const [actionErr, setActionErr] = useState<string | null>(null)
-
-  /** Success messages show as a short-lived toast. */
-  useEffect(() => {
-    if (!actionMsg) return
-    const id = window.setTimeout(() => setActionMsg(null), 3500)
-    return () => window.clearTimeout(id)
-  }, [actionMsg])
-
+  /** Runs a controller action and reports the result as a toast. */
   async function runAction(task: () => Promise<unknown>, successMessage: string) {
-    setActionErr(null)
-    setActionMsg(null)
     try {
       await task()
-      setActionMsg(successMessage)
+      toast.success(successMessage)
     } catch (e) {
-      setActionErr(e instanceof Error ? e.message : 'Controller action failed')
+      toast.error(e instanceof Error ? e.message : 'Controller action failed')
     }
   }
 
@@ -455,18 +445,11 @@ export function DashboardPage() {
       />
       <PageBody>
         {msg ? <ErrorBox message={msg} /> : null}
-        {actionErr ? <ErrorBox message={actionErr} /> : null}
         {visibleCards.length > 0 ? (
           <div className={styles.grid}>{visibleCards.map(renderCard)}</div>
         ) : null}
         <CustomizeHome order={cardOrder} visibility={cardVisibility} />
       </PageBody>
-      {actionMsg ? (
-        <div className={styles.toast} role="status" aria-live="polite">
-          <CheckCircle2 size={18} aria-hidden />
-          {actionMsg}
-        </div>
-      ) : null}
     </>
   )
 }

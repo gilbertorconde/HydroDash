@@ -1,11 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import { osCommand } from '../api/client'
 import { qk, useJsonAll } from '../api/hooks'
 import { Download, Monitor, Router, TriangleAlert, Upload } from 'lucide-react'
 import { MoreSubpageLayout } from '../components/MoreSubpageLayout'
 import { Button, Card, ErrorBox, Pill, Spinner } from '../components/ui'
 import { useConfirm } from '../components/confirmContext'
+import { useToast } from '../components/toastContext'
 import { useAppPreferences } from '../lib/appPreferences'
 import {
   type OpenSprinklerControllerBackup,
@@ -40,14 +41,11 @@ function backupFilename(prefix: string) {
 export function ConfigBackupPage() {
   const ja = useJsonAll()
   const confirm = useConfirm()
+  const toast = useToast()
   const prefs = useAppPreferences()
   const qc = useQueryClient()
   const controllerInputRef = useRef<HTMLInputElement>(null)
   const appInputRef = useRef<HTMLInputElement>(null)
-
-  const [controllerMsg, setControllerMsg] = useState<string | null>(null)
-  const [controllerLocalErr, setControllerLocalErr] = useState<string | null>(null)
-  const [appMsg, setAppMsg] = useState<string | null>(null)
 
   const importController = useMutation({
     mutationFn: async ({ backup }: { backup: OpenSprinklerControllerBackup }) => {
@@ -55,9 +53,10 @@ export function ConfigBackupPage() {
       await importOpenSprinklerControllerBackup(backup, ja.data, osCommand)
     },
     onSuccess: async () => {
-      setControllerMsg('Configuration applied. Refreshing data from the controller.')
+      toast.success('Configuration applied. Refreshing data from the controller.')
       await qc.invalidateQueries({ queryKey: qk.all })
     },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Import failed'),
   })
 
   const importApp = useMutation({
@@ -73,45 +72,44 @@ export function ConfigBackupPage() {
       applyHydroDashAppBackup(data)
     },
     onSuccess: () => {
-      setAppMsg('App settings restored. Reloading…')
+      toast.success('App settings restored. Reloading…')
       window.setTimeout(() => window.location.reload(), 400)
     },
+    onError: (e) => toast.error(e instanceof Error ? e.message : 'Import failed'),
   })
 
   function exportController() {
     if (!ja.data) return
     downloadJson(backupFilename('controller-backup'), exportControllerDocument(ja.data))
-    setControllerMsg('Controller backup downloaded.')
+    toast.success('Controller backup downloaded.')
   }
 
   function exportApp() {
     downloadJson(backupFilename('hydrodash-app-backup'), {
       hydrodashApp: collectHydroDashAppBackup(prefs),
     })
-    setAppMsg('App backup downloaded (this browser only).')
+    toast.success('App backup downloaded (this browser only).')
   }
 
   async function onPickControllerFile(file: File) {
-    setControllerMsg(null)
-    setControllerLocalErr(null)
     importController.reset()
     const text = await file.text()
     let raw: unknown
     try {
       raw = JSON.parse(text.trim().replace(/[\u201c\u201d\u2033]/g, '"'))
     } catch {
-      setControllerLocalErr('File is not valid JSON.')
+      toast.error('File is not valid JSON.')
       return
     }
     let backup: OpenSprinklerControllerBackup
     try {
       backup = parseOpenSprinklerControllerBackup(raw)
     } catch (e) {
-      setControllerLocalErr(e instanceof Error ? e.message : 'Invalid backup')
+      toast.error(e instanceof Error ? e.message : 'Invalid backup')
       return
     }
     if (!ja.data) {
-      setControllerMsg('Wait for controller data to load, then try again.')
+      toast.info('Wait for controller data to load, then try again.')
       return
     }
     const networkWarning = controllerBackupNetworkWarning(backup, ja.data)
@@ -124,7 +122,7 @@ export function ConfigBackupPage() {
       tone: 'danger',
     })
     if (!ok) {
-      setControllerMsg('Import cancelled.')
+      toast.info('Import cancelled.')
       return
     }
     importController.mutate({ backup })
@@ -200,18 +198,6 @@ export function ConfigBackupPage() {
               }}
             />
           </section>
-
-          {controllerLocalErr || importController.isError || controllerMsg ? (
-            <div className={styles.feedback}>
-              {controllerLocalErr ? <ErrorBox message={controllerLocalErr} /> : null}
-              {importController.isError ? (
-                <ErrorBox
-                  message={importController.error instanceof Error ? importController.error.message : 'Import failed'}
-                />
-              ) : null}
-              {controllerMsg ? <p className={styles.ok}>{controllerMsg}</p> : null}
-            </div>
-          ) : null}
         </Card>
 
         <Card
@@ -258,7 +244,6 @@ export function ConfigBackupPage() {
                 const f = e.target.files?.[0]
                 e.target.value = ''
                 if (!f) return
-                setAppMsg(null)
                 const ok = await confirm({
                   title: 'Restore app settings?',
                   message: 'Display preferences, theme and the Home layout in this browser are replaced.',
@@ -266,22 +251,13 @@ export function ConfigBackupPage() {
                   tone: 'danger',
                 })
                 if (!ok) {
-                  setAppMsg('Import cancelled.')
+                  toast.info('Import cancelled.')
                   return
                 }
                 importApp.mutate(f)
               }}
             />
           </section>
-
-          {importApp.isError || appMsg ? (
-            <div className={styles.feedback}>
-              {importApp.isError ? (
-                <ErrorBox message={importApp.error instanceof Error ? importApp.error.message : 'Import failed'} />
-              ) : null}
-              {appMsg ? <p className={styles.ok}>{appMsg}</p> : null}
-            </div>
-          ) : null}
         </Card>
       </div>
     </MoreSubpageLayout>

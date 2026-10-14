@@ -11,6 +11,7 @@ import {
 } from '../server/notifications/types'
 import { Button, ErrorBox, Field, Input, Switch } from './ui'
 import { useNotificationsSaveSettings, useNotificationsTest } from '../api/hooks'
+import { useToast } from './toastContext'
 import styles from './NotificationsSettingsModal.module.css'
 
 type Props = {
@@ -29,6 +30,7 @@ function serviceEnabledLocal(settings: NotificationSettingsJson, key: Notificati
 export function NotificationsSettingsModal({ onClose, initial, pushConfigured }: Props) {
   const save = useNotificationsSaveSettings()
   const testNotify = useNotificationsTest()
+  const toast = useToast()
   const [settings, setSettings] = useState<NotificationSettingsJson>(() =>
     initial ? mergeNotificationSettings(initial) : defaultSettingsJson(),
   )
@@ -108,26 +110,21 @@ export function NotificationsSettingsModal({ onClose, initial, pushConfigured }:
               size="sm"
               startIcon={<Send size={15} aria-hidden />}
               disabled={testNotify.isPending}
-              onClick={() => testNotify.mutate()}
+              onClick={() =>
+                testNotify.mutate(undefined, {
+                  onSuccess: (data) => {
+                    if (data.push === 'ok') toast.success('Saved to inbox and push sent to ntfy.')
+                    else if (data.push === 'failed')
+                      toast.error('Saved to inbox. Push was attempted but ntfy did not accept the message.')
+                    else toast.info('Saved to inbox. Push is not configured on the server.')
+                  },
+                  onError: (e) => toast.error(e instanceof Error ? e.message : 'Test failed'),
+                })
+              }
             >
               {testNotify.isPending ? 'Sending…' : 'Send test'}
             </Button>
           </div>
-          {testNotify.isError ? (
-            <ErrorBox
-              message={testNotify.error instanceof Error ? testNotify.error.message : 'Test failed'}
-            />
-          ) : null}
-          {testNotify.isSuccess && testNotify.data ? (
-            <p className={styles.testResult} role="status">
-              {testNotify.data.push === 'skipped' &&
-                'Saved to inbox. Push is not configured on the server.'}
-              {testNotify.data.push === 'ok' && 'Saved to inbox and push sent to ntfy.'}
-              {testNotify.data.push === 'failed' &&
-                'Saved to inbox. Push was attempted but ntfy did not accept the message.'}
-            </p>
-          ) : null}
-
           {save.isError ? (
             <ErrorBox message={save.error instanceof Error ? save.error.message : 'Save failed'} />
           ) : null}
@@ -146,7 +143,10 @@ export function NotificationsSettingsModal({ onClose, initial, pushConfigured }:
             disabled={save.isPending}
             onClick={() =>
               save.mutate(settings, {
-                onSuccess: () => onClose(),
+                onSuccess: () => {
+                  toast.success('Notification settings saved.')
+                  onClose()
+                },
               })
             }
           >

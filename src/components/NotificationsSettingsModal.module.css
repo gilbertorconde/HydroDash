@@ -143,14 +143,6 @@
   line-height: 1.45;
 }
 
-.testResult {
-  margin: 0 0 var(--space-md);
-  font-size: var(--text-small);
-  font-weight: 650;
-  color: var(--color-success);
-  line-height: 1.4;
-}
-
 .hint {
   margin: 0;
   font-size: 0.78rem;
