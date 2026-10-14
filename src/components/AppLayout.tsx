@@ -5,6 +5,7 @@ import { CalendarClock, Droplets, History, Home, LayoutGrid, LogOut, MoonStar, S
 import { useAuthLogout } from '../api/hooks'
 import { NotificationsBell } from './NotificationsBell'
 import { useTheme } from '../context/ThemeContext'
+import { HYDRODASH_LOGO_SVG_HEIGHT, HYDRODASH_LOGO_SVG_WIDTH } from '../lib/hydroDashLogo'
 import styles from './AppLayout.module.css'
 
 /** Main destinations: top glass pill on desktop, floating tab bar on phones. */
@@ -64,7 +65,14 @@ export function AppLayout({ children }: { children?: ReactNode }) {
         <div className={styles.headerInner}>
           <Link to="/" className={styles.brand} title="Home">
             <span className={styles.brandMark} aria-hidden>
-              <Droplets size={18} strokeWidth={2.4} />
+              <img
+                src="/hydroDashLogo.svg"
+                alt=""
+                className={styles.brandLogo}
+                width={HYDRODASH_LOGO_SVG_WIDTH}
+                height={HYDRODASH_LOGO_SVG_HEIGHT}
+                decoding="async"
+              />
             </span>
             <span className={styles.brandTitle}>HydroDash</span>
           </Link>
