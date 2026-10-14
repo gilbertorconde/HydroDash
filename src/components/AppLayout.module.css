@@ -44,14 +44,21 @@
   text-decoration: none;
 }
 
+/* White app-icon tile so the blue/green logo stays legible on the blue header. */
 .brandMark {
   display: grid;
   place-items: center;
-  width: 2.15rem;
-  height: 2.15rem;
+  width: 2.35rem;
+  height: 2.35rem;
   border-radius: 12px;
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
+  background: #fff;
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.18);
+}
+
+.brandLogo {
+  width: 1.75rem;
+  height: auto;
+  display: block;
 }
 
 .brandTitle {
