@@ -199,3 +199,18 @@
   font-weight: 650;
   margin-bottom: var(--space-xs);
 }
+
+/* Per-section "Save changes / Discard" row (enabled only when the section has edits). */
+.saveBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.dirtyHint {
+  font-size: var(--text-small);
+  font-weight: 650;
+  color: var(--color-warning);
+}

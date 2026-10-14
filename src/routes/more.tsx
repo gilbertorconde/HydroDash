@@ -1,135 +1,172 @@
-import { useState } from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
-import { ChevronRight } from 'lucide-react'
-import { useNotificationsConfig } from '../api/hooks'
+import { useState, type ComponentType, type ReactNode } from 'react'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import {
+  Activity,
+  Bell,
+  CalendarClock,
+  ChevronRight,
+  CloudSun,
+  HardDriveDownload,
+  Info,
+  LogOut,
+  Router,
+  Settings,
+  Stethoscope,
+} from 'lucide-react'
+import { useAuthLogout, useNotificationsConfig } from '../api/hooks'
 import { NotificationsSettingsModal } from '../components/NotificationsSettingsModal'
 import { ProtectedPage } from '../components/ProtectedPage'
-import { Card, Spinner } from '../components/ui'
+import { Spinner } from '../components/ui'
 import styles from './MorePage.module.css'
 
 export const Route = createFileRoute('/more')({
   component: MoreRoute,
 })
 
+type IconType = ComponentType<{ size?: number; strokeWidth?: number; 'aria-hidden'?: boolean }>
+
 const links = [
   {
+    to: '/settings',
+    title: 'Settings',
+    desc: 'Controller options and app preferences',
+    icon: Settings,
+  },
+  {
     to: '/forecast',
-    title: 'Weather & forecast',
-    desc: 'Live wtdata from the controller and guided weather provider setup.',
+    title: 'Weather',
+    desc: 'Weather provider and watering adjustment',
+    icon: CloudSun,
   },
   {
     to: '/preview',
     title: 'Schedule preview',
-    desc: 'Approximate program starts for a single day (simplified timeline).',
-  },
-  {
-    to: '/sites',
-    title: 'Controllers',
-    desc: 'Switch saved devices when the server is configured with OS_SITES.',
-  },
-  {
-    to: '/diagnostics',
-    title: 'Diagnostics',
-    desc: 'Technical debug dump from the controller for troubleshooting.',
-  },
-  {
-    to: '/backup',
-    title: 'Configuration backup',
-    desc: 'Export or import full controller configuration and HydroDash app settings for this browser.',
+    desc: 'See what will run on a given day',
+    icon: CalendarClock,
   },
   {
     to: '/sensors',
     title: 'Sensors',
-    desc: 'Extended sensors: list, edit definitions, live values, log chart, and read-now when the firmware exposes them.',
+    desc: 'Live readings and history from extra sensors',
+    icon: Activity,
   },
   {
-    to: '/about',
-    title: 'About',
-    desc: 'What HydroDash is and how it relates to OpenSprinkler.',
+    to: '/sites',
+    title: 'Controllers',
+    desc: 'Switch between your controllers',
+    icon: Router,
+  },
+  {
+    to: '/backup',
+    title: 'Backup & restore',
+    desc: 'Save or restore your controller and app settings',
+    icon: HardDriveDownload,
+  },
+  {
+    to: '/diagnostics',
+    title: 'Diagnostics',
+    desc: 'Technical info for troubleshooting',
+    icon: Stethoscope,
   },
 ] as const
 
-const linksBeforeAbout = links.slice(0, -1)
-const aboutLink = links[links.length - 1]!
+const aboutLink = {
+  to: '/about',
+  title: 'About',
+  desc: 'What HydroDash is and how it works',
+  icon: Info,
+} as const
 
-function tileLink({ to, title, desc }: (typeof links)[number]) {
+/** Shared row contents: icon, title + one-line description, trailing chevron. */
+function RowBody({ icon: Icon, title, desc, trailing }: { icon: IconType; title: string; desc: ReactNode; trailing?: ReactNode }) {
   return (
-    <Link key={to} to={to} className={styles.cardLink}>
-      <Card className={styles.tileCard} bodyClassName={styles.tileBody} title={title}>
-        <p className={styles.cardDesc}>{desc}</p>
-        <span className={styles.tileMeta}>
-          <span className={styles.tileCta}>Open</span>
-          <ChevronRight className={styles.tileChevron} size={18} strokeWidth={2.25} aria-hidden />
-        </span>
-      </Card>
-    </Link>
+    <>
+      <span className={styles.rowIcon}>
+        <Icon size={18} strokeWidth={2.1} aria-hidden />
+      </span>
+      <span className={styles.rowText}>
+        <span className={styles.rowTitle}>{title}</span>
+        <span className={styles.rowDesc}>{desc}</span>
+      </span>
+      {trailing !== undefined ? trailing : <ChevronRight className={styles.rowChevron} size={18} strokeWidth={2.25} aria-hidden />}
+    </>
+  )
+}
+
+function linkRow({ to, title, desc, icon }: (typeof links)[number] | typeof aboutLink) {
+  return (
+    <li key={to}>
+      <Link to={to} className={styles.row}>
+        <RowBody icon={icon} title={title} desc={desc} />
+      </Link>
+    </li>
   )
 }
 
 function MoreRoute() {
   const notifConfig = useNotificationsConfig()
   const [notifOpen, setNotifOpen] = useState(false)
+  const logoutMutation = useAuthLogout()
+  const navigate = useNavigate()
 
   const notifResolved = !notifConfig.isPending
   const notifEnabled = notifConfig.data?.enabled === true
 
+  async function logout() {
+    await logoutMutation.mutateAsync()
+    navigate({ to: '/login', replace: true })
+  }
+
   return (
     <ProtectedPage>
-      <div>
+      <div className={styles.page}>
         <h1 className={styles.title}>More</h1>
-        <p className={styles.subtitle}>
-          Secondary screens and tools. Core watering lives under Home, Zones, Programs, and History.
-        </p>
-        <div className={styles.grid}>
-          {linksBeforeAbout.map((entry) => tileLink(entry))}
-          {notifResolved && notifEnabled ? (
-            <div
-              className={styles.cardLink}
-              role="button"
-              tabIndex={0}
-              onClick={() => setNotifOpen(true)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  setNotifOpen(true)
-                }
-              }}
+
+        <ul className={styles.list}>
+          {links.map((entry) => linkRow(entry))}
+          <li>
+            {notifResolved && notifEnabled ? (
+              <button type="button" className={styles.row} onClick={() => setNotifOpen(true)}>
+                <RowBody
+                  icon={Bell}
+                  title="Notifications"
+                  desc={
+                    notifConfig.data?.pushEnabled
+                      ? 'Choose which events alert you'
+                      : 'Choose which events alert you (phone push not set up)'
+                  }
+                />
+              </button>
+            ) : notifResolved ? (
+              <div className={`${styles.row} ${styles.rowMuted}`}>
+                <RowBody
+                  icon={Bell}
+                  title="Notifications"
+                  desc="Not set up on this server"
+                  trailing={<span className={styles.rowStatus}>Off</span>}
+                />
+              </div>
+            ) : (
+              <div className={`${styles.row} ${styles.rowMuted}`}>
+                <RowBody icon={Bell} title="Notifications" desc="Checking…" trailing={<Spinner />} />
+              </div>
+            )}
+          </li>
+          {linkRow(aboutLink)}
+        </ul>
+
+        <ul className={styles.list}>
+          <li>
+            <button
+              type="button"
+              className={`${styles.row} ${styles.rowDanger}`}
+              onClick={() => void logout()}
+              disabled={logoutMutation.isPending}
             >
-              <Card className={styles.tileCard} bodyClassName={styles.tileBody} title="Push & in-app notifications">
-                <p className={styles.cardDesc}>
-                  ntfy topics, which controller events notify you, and the inbox in the header bell.
-                  {notifConfig.data?.pushEnabled ? '' : ' Push is off until NTFY_SERVER_URL is set on the server.'}
-                </p>
-                <span className={styles.tileMeta}>
-                  <span className={styles.tileCta}>Open</span>
-                  <ChevronRight className={styles.tileChevron} size={18} strokeWidth={2.25} aria-hidden />
-                </span>
-              </Card>
-            </div>
-          ) : notifResolved ? (
-            <div className={styles.tileShell}>
-              <Card
-                className={`${styles.tileCard} ${styles.tileCardMuted}`}
-                bodyClassName={styles.tileBody}
-                title="Push & in-app notifications"
-              >
-                <p className={styles.cardDesc}>
-                  In-app notification inbox and optional ntfy push are not enabled on this installation. The server
-                  needs a notifications database (see HydroDash docs) before these features can be
-                  used.
-                </p>
-                <span className={styles.tileMetaStatic}>Not configured</span>
-              </Card>
-            </div>
-          ) : (
-            <div className={styles.tileShell}>
-              <Card className={styles.tileCard} bodyClassName={styles.tileBody} title="Push & in-app notifications">
-                <Spinner />
-              </Card>
-            </div>
-          )}
-          {tileLink(aboutLink)}
-        </div>
+              <RowBody icon={LogOut} title="Log out" desc="Sign out of HydroDash on this device" trailing={null} />
+            </button>
+          </li>
+        </ul>
 
         {notifOpen ? (
           <NotificationsSettingsModal

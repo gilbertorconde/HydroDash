@@ -1,5 +1,5 @@
 import type { UseMutationResult } from '@tanstack/react-query'
-import { Button, Spinner } from '../ui'
+import { Button, OverflowMenu, Spinner } from '../ui'
 import styles from './dashboardWidgets.module.css'
 
 type Settings = Record<string, unknown> | undefined
@@ -41,7 +41,7 @@ export function LiveStatusWidget({
             {settings.rd ? `Until ${formatTime(settings.rdst as number)}` : 'Off'}
           </dd>
           <dt>Queue</dt>
-          <dd>{settings.nq ?? 0} zone(s)</dd>
+          <dd>{Number(settings.nq ?? 0)} zone(s)</dd>
           <dt>Pause</dt>
           <dd>
             {settings.pq ? `Active (${settings.pt ?? 0}s left)` : 'Not paused'}
@@ -52,31 +52,12 @@ export function LiveStatusWidget({
         <Button
           variant="secondary"
           disabled={cv.isPending}
-          onClick={() =>
-            runAction(
-              () => cv.mutateAsync({ en: settings?.en ? 0 : 1 }),
-              settings?.en ? 'Controller disabled.' : 'Controller enabled.',
-            )
-          }
-        >
-          {settings?.en ? 'Disable operation' : 'Enable operation'}
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={cv.isPending}
           onClick={() => runAction(() => cv.mutateAsync({ rrsn: 1 }), 'Running stations stopped.')}
         >
           Stop running stations
         </Button>
         <Button
           variant="secondary"
-          disabled={cv.isPending}
-          onClick={() => runAction(() => cv.mutateAsync({ rsn: 1 }), 'All stations reset.')}
-        >
-          Reset all stations
-        </Button>
-        <Button
-          variant="danger"
           disabled={pq.isPending}
           onClick={async () => {
             if (settings?.pq) {
@@ -87,6 +68,39 @@ export function LiveStatusWidget({
         >
           {settings?.pq ? 'Resume (cancel pause)' : 'Pause 10 min'}
         </Button>
+        <OverflowMenu
+          label="More controller actions"
+          items={[
+            {
+              label: settings?.en ? 'Disable operation' : 'Enable operation',
+              danger: Boolean(settings?.en),
+              disabled: cv.isPending,
+              onSelect: () => {
+                if (
+                  settings?.en &&
+                  !window.confirm(
+                    'Disable operation? Scheduled programs will not run until operation is enabled again.',
+                  )
+                ) {
+                  return
+                }
+                void runAction(
+                  () => cv.mutateAsync({ en: settings?.en ? 0 : 1 }),
+                  settings?.en ? 'Controller disabled.' : 'Controller enabled.',
+                )
+              },
+            },
+            {
+              label: 'Reset all stations',
+              danger: true,
+              disabled: cv.isPending,
+              onSelect: () => {
+                if (!window.confirm('Reset all stations? This stops every running and queued zone.')) return
+                void runAction(() => cv.mutateAsync({ rsn: 1 }), 'All stations reset.')
+              },
+            },
+          ]}
+        />
       </div>
     </>
   )

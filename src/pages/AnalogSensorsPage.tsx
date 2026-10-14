@@ -156,16 +156,20 @@ export function AnalogSensorsPage() {
     return (
       <MoreSubpageLayout title="Sensors">
         <p className={shell.lead}>
-          Extended analog and logged sensors use an optional controller API. This device did not return a
-          sensor list, so either the firmware build has no sensor stack or the request failed.
+          Your controller firmware doesn&apos;t support extended sensors.
         </p>
-        <Card title="Unavailable">
+        <Card title="Not available">
           <p className={styles.unsupported}>
-            HydroDash only talks to the controller over the same JSON API as the mobile app. If your
-            hardware uses the sensor extension, update to a firmware that exposes sensor list and log
-            commands, then open this page again.
+            Extended sensors (analog sensors with readings and history) need a controller firmware that
+            includes them. If your hardware has extra sensors attached, update the controller firmware, then
+            open this page again. Rain, soil, and flow sensors are still set up under Settings.
           </p>
-          <p className={styles.unsupportedDetail}>{sl.data.message}</p>
+          <details style={{ marginTop: 'var(--space-md)' }}>
+            <summary className={styles.unsupported} style={{ cursor: 'pointer', fontSize: '0.85rem' }}>
+              Technical details
+            </summary>
+            <p className={styles.unsupportedDetail}>{sl.data.message}</p>
+          </details>
         </Card>
       </MoreSubpageLayout>
     )

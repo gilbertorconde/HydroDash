@@ -37,6 +37,24 @@
   border-color: color-mix(in srgb, var(--color-muted) 45%, var(--color-border));
 }
 
+.homeSettingsBtnDone {
+  gap: 0.3rem;
+  padding: 0.28rem 0.6rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.homeSettingsBtnDone:hover {
+  color: var(--color-on-accent);
+  background: color-mix(in srgb, var(--color-accent) 90%, #fff);
+  border-color: color-mix(in srgb, var(--color-accent) 92%, #fff);
+}
+
 .homeSettingsBtn:focus-visible {
   outline: 2px solid var(--color-accent, var(--color-cta));
   outline-offset: 2px;
@@ -52,8 +70,14 @@
   width: 100%;
 }
 
-.rglRoot :global(.react-grid-item) {
+/* Animate reflow only while customizing, so first-measure / live data changes don't slide tiles. */
+.rglRootEditing :global(.react-grid-item) {
   transition: transform 180ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Keep an open overflow menu above neighbouring tiles. */
+.rglRoot :global(.react-grid-item):has([aria-expanded='true']) {
+  z-index: 10;
 }
 
 .rglRoot :global(.react-grid-placeholder) {
@@ -62,42 +86,11 @@
   opacity: 0.85;
 }
 
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 1.25rem;
-  padding-top: max(1.25rem, env(safe-area-inset-top));
-  overflow-y: auto;
-  background: color-mix(in srgb, var(--color-text) 40%, transparent);
-  backdrop-filter: blur(4px);
+.customizeCard {
+  margin-bottom: var(--space-lg);
 }
 
-.modalPanel {
-  width: 100%;
-  max-width: min(22rem, 100%);
-  margin: 0.75rem auto;
-  flex-shrink: 0;
-}
-
-.modalCard {
-  margin-bottom: 0;
-  box-shadow:
-    0 18px 40px -10px color-mix(in srgb, #000 50%, transparent),
-    0 0 0 1px color-mix(in srgb, var(--color-border) 80%, transparent);
-}
-
-.modalCloseBtn {
-  font-size: 1.35rem;
-  line-height: 1;
-  padding: 0.2rem 0.45rem;
-  min-width: 2.25rem;
-}
-
-.modalHint {
+.customizeHint {
   margin: 0 0 var(--space-md);
   font-size: 0.84rem;
   color: var(--color-muted);
@@ -109,8 +102,8 @@
   margin: 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
+  flex-wrap: wrap;
+  gap: 0.45rem 1.25rem;
 }
 
 .visibilityRow {
@@ -130,7 +123,11 @@
   opacity: 0.55;
 }
 
-.modalActions {
+.customizeActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-sm);
   margin-top: var(--space-md);
   padding-top: var(--space-sm);
   border-top: 1px solid var(--color-border);

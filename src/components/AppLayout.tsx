@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
 import { useState } from 'react'
-import { Link, Outlet, useNavigate } from '@tanstack/react-router'
+import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import {
   Gauge,
   History,
   Home,
+  LayoutGrid,
   LogOut,
   Menu,
   MoonStar,
@@ -30,11 +31,30 @@ const nav = [
   { to: '/more', label: 'More', icon: Gauge },
 ]
 
+/** Phone bottom tab bar; Settings and the other secondary screens live under More. */
+const tabs = [
+  { to: '/', label: 'Home', icon: Home },
+  { to: '/zones', label: 'Zones', icon: Droplets },
+  { to: '/programs', label: 'Programs', icon: Waves },
+  { to: '/history', label: 'History', icon: History },
+  { to: '/more', label: 'More', icon: LayoutGrid },
+] as const
+
+/** Screens reached from the More page; the More tab stays highlighted while on them. */
+const morePaths = ['/more', '/settings', '/forecast', '/preview', '/sites', '/diagnostics', '/backup', '/sensors', '/about']
+
+function isTabActive(to: string, pathname: string): boolean {
+  if (to === '/') return pathname === '/'
+  if (to === '/more') return morePaths.some((p) => pathname === p || pathname.startsWith(`${p}/`))
+  return pathname === to || pathname.startsWith(`${to}/`)
+}
+
 export function AppLayout({ children }: { children?: ReactNode }) {
   const { resolved, toggle } = useTheme()
   const navigate = useNavigate()
   const logoutMutation = useAuthLogout()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
 
   async function logout() {
     await logoutMutation.mutateAsync()
@@ -136,6 +156,22 @@ export function AppLayout({ children }: { children?: ReactNode }) {
       <main className={styles.main}>
         {children ?? <Outlet />}
       </main>
+      <nav className={styles.tabBar} aria-label="Main">
+        {tabs.map(({ to, label, icon: Icon }) => {
+          const active = isTabActive(to, pathname)
+          return (
+            <Link
+              key={`tab-${to}`}
+              to={to}
+              className={active ? `${styles.tab} ${styles.tabActive}` : styles.tab}
+              aria-current={active ? 'page' : undefined}
+            >
+              <Icon size={20} strokeWidth={active ? 2.4 : 2} aria-hidden />
+              <span className={styles.tabLabel}>{label}</span>
+            </Link>
+          )
+        })}
+      </nav>
     </div>
   )
 }

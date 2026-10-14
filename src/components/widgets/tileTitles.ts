@@ -1,6 +1,7 @@
-import type { DashboardTileId } from '../../lib/dashboardTileOrder'
+import type { HomeTileId } from '../../lib/homeDashboardLayout'
 
-export const DASHBOARD_TILE_TITLES: Record<DashboardTileId, string> = {
+export const DASHBOARD_TILE_TITLES: Record<HomeTileId, string> = {
+  running: 'Now running',
   controller: 'Controller',
   live: 'Live status',
   sensors: 'Sensors & weather',

@@ -55,6 +55,19 @@
   z-index: 50;
 }
 
+/* The bell is not at the header's right edge on phones, so anchor to the viewport instead. */
+@media (max-width: 640px) {
+  .panel {
+    position: fixed;
+    /* Sticky header is ~3.6rem tall at this width (0.65rem padding + 2.25rem buttons). */
+    top: 3.75rem;
+    left: 1rem;
+    right: 1rem;
+    width: auto;
+    max-height: min(70vh, 28rem);
+  }
+}
+
 .panelHeader {
   padding: 0.55rem 0.75rem;
   font-size: 0.72rem;

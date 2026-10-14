@@ -176,6 +176,10 @@
   display: none;
 }
 
+.tabBar {
+  display: none;
+}
+
 @media (max-width: 860px) {
   .header {
     display: flex;
@@ -271,5 +275,69 @@
     border-radius: 0;
     margin-top: 0.2rem;
     padding-top: 0.7rem;
+  }
+}
+
+/* Phones: bottom tab bar replaces the hamburger menu (Logout lives on the More page). */
+@media (max-width: 767.98px) {
+  .mobileMenuBtn,
+  .mobileMenu,
+  .mobileMenuOpen {
+    display: none;
+  }
+
+  .main {
+    padding-bottom: calc(4.75rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .tabBar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    padding: 0.3rem 0.35rem calc(0.3rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--color-border);
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    backdrop-filter: blur(14px);
+  }
+
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.18rem;
+    min-height: 3.1rem;
+    padding: 0.25rem 0.15rem;
+    border-radius: var(--radius-sm);
+    color: var(--color-muted);
+    text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      color 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  .tab:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+    outline-offset: -2px;
+  }
+
+  .tabActive {
+    color: var(--color-accent);
+    background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  }
+
+  .tabLabel {
+    font-size: 0.7rem;
+    font-weight: 750;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 }

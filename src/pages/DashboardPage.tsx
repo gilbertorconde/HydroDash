@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useCallback, useMemo, useState } from 'react'
 import {
   GridLayout,
   useContainerWidth,
@@ -7,10 +6,10 @@ import {
   verticalCompactor,
   getBreakpointFromWidth,
 } from 'react-grid-layout'
-import type { Layout, ResponsiveLayouts } from 'react-grid-layout'
+import type { Layout } from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
-import { Settings } from 'lucide-react'
+import { Check, Settings } from 'lucide-react'
 import {
   useController,
   useJsonAll,
@@ -28,24 +27,25 @@ import { OpenSprinklerApiError, OpenSprinklerHttpError } from '../api/client'
 import { ErrorBox, Button, Card } from '../components/ui'
 import { formatEpochSecondsLocale } from '../lib/formatLocale'
 import { useAppPreferences } from '../lib/appPreferences'
-import { DASHBOARD_TILE_IDS, type DashboardTileId, useDashboardTileOrder } from '../lib/dashboardTileOrder'
 import {
-  DASHBOARD_RGL_BREAKPOINTS,
-  DASHBOARD_RGL_COLS,
-  DASHBOARD_TILE_DEFAULT_H,
-  DASHBOARD_TILE_ROW_BOUNDS,
-  buildDefaultDashboardLayouts,
-  persistDashboardLayouts,
-  setTileHeightInAllBreakpoints,
-  useDashboardLayouts,
-  withLayoutHeightConstraints,
-} from '../lib/dashboardRglLayout'
-import {
-  persistDashboardTileVisibility,
-  useDashboardTileVisibility,
-  visibilityWithToggle,
-  visibleTileIdsOrdered,
-} from '../lib/dashboardTileVisibility'
+  HOME_RGL_BREAKPOINTS,
+  HOME_RGL_COLS,
+  HOME_TILE_FALLBACK_PX,
+  HOME_TILE_GAP_PX,
+  HOME_TILE_IDS,
+  HOME_TILE_MAX_H_BOUNDS,
+  type HomeTileId,
+  clearHomeTileMaxHeights,
+  persistHomeBreakpointLayout,
+  persistHomeTileMaxHeight,
+  resetHomeLayouts,
+  toggleHomeTileVisibility,
+  useHomeLayouts,
+  useHomeTileMaxHeights,
+  useHomeTileOrder,
+  useHomeTileVisibility,
+  visibleHomeTileIds,
+} from '../lib/homeDashboardLayout'
 import { parseLogEntries } from '../lib/irrigationLog'
 import { deviceFirmwareIsOlderThanRelease } from '../lib/opensprinklerFirmwareRelease'
 import {
@@ -57,13 +57,17 @@ import {
 import { flagEnabled, flagUseWeather } from '../lib/programCodec'
 import { normalizeWeatherProviderId, providerById, wtoRecord } from '../lib/weatherProviders'
 import {
+  buildNowRunning,
   ControllerWidget,
   countWateringZones,
   DashboardTile,
   DASHBOARD_TILE_TITLES,
+  findNextScheduledRun,
   HistoryWidget,
   jlRangeLastTwoDays,
   LiveStatusWidget,
+  masterStationIds,
+  NowRunningWidget,
   programWatersEnabledStation,
   QuickRunWidget,
   RGL_DRAG_HANDLE_CLASS,
@@ -84,17 +88,21 @@ export function DashboardPage() {
   const js = useStationStatus(5000)
   const prefs = useAppPreferences()
 
-  const layoutsFromStore = useDashboardLayouts()
-  const visibility = useDashboardTileVisibility()
-  const tileOrder = useDashboardTileOrder()
+  const layoutsFromStore = useHomeLayouts()
+  const visibility = useHomeTileVisibility()
+  const tileOrder = useHomeTileOrder()
+  const tileMaxHeights = useHomeTileMaxHeights()
   const visibleIds = useMemo(
-    () => visibleTileIdsOrdered(visibility, tileOrder),
+    () => visibleHomeTileIds(visibility, tileOrder),
     [visibility, tileOrder],
   )
   const visibleCount = useMemo(
-    () => DASHBOARD_TILE_IDS.filter((id) => visibility[id]).length,
+    () => HOME_TILE_IDS.filter((id) => visibility[id]).length,
     [visibility],
   )
+
+  /** Customize mode: drag grips, height controls and the tile picker are only shown here. */
+  const [editing, setEditing] = useState(false)
 
   const { width, containerRef, mounted } = useContainerWidth({ initialWidth: 1280 })
   /** Avoid width 0 / tiny first frames breaking breakpoint math and grid column width. */
@@ -102,49 +110,42 @@ export function DashboardPage() {
 
   /** Compute breakpoint + cols directly — avoids useResponsiveLayout's stale initialBreakpoint. */
   const breakpoint = useMemo(
-    () => getBreakpointFromWidth(DASHBOARD_RGL_BREAKPOINTS, gridWidth),
+    () => getBreakpointFromWidth(HOME_RGL_BREAKPOINTS, gridWidth),
     [gridWidth],
   )
-  const cols = DASHBOARD_RGL_COLS[breakpoint] ?? 12
+  const cols = HOME_RGL_COLS[breakpoint as keyof typeof HOME_RGL_COLS] ?? 12
+  /** Single column (phones): tiles always fit their content, no caps / inner scroll. */
+  const singleColumn = cols === 1
 
-  /** Pick + sanitize the layout for the current breakpoint from the store. */
+  /** Measured card heights (px) reported by each tile; drives the grid row spans. */
+  const [tileHeights, setTileHeights] = useState<Partial<Record<string, number>>>({})
+  const onTileContentHeight = useCallback((id: string, px: number) => {
+    setTileHeights((prev) => (prev[id] === px ? prev : { ...prev, [id]: px }))
+  }, [])
+
+  /**
+   * Stored positions (x/y/w) for the current breakpoint with heights from measurement.
+   * The grid uses `rowHeight: 1` and no vertical margin, so `h` is the card height in px plus
+   * the gap below it.
+   */
   const layout = useMemo(() => {
     const raw = layoutsFromStore[breakpoint] ?? []
-    const visibleSet = new Set(visibleIds)
-    const filtered = raw.filter((item) => visibleSet.has(item.i as DashboardTileId))
-    const constrained = withLayoutHeightConstraints(filtered)
-    return verticalCompactor.compact(cloneLayout(constrained), cols)
-  }, [layoutsFromStore, breakpoint, cols, visibleIds])
+    const visibleSet = new Set<string>(visibleIds)
+    const items = raw
+      .filter((item) => visibleSet.has(item.i))
+      .map((item) => {
+        const px = tileHeights[item.i] ?? HOME_TILE_FALLBACK_PX[item.i as HomeTileId] ?? 200
+        return { i: item.i, x: item.x, y: item.y, w: item.w, h: Math.max(1, px + HOME_TILE_GAP_PX) }
+      })
+    return verticalCompactor.compact(cloneLayout(items), cols)
+  }, [layoutsFromStore, breakpoint, cols, visibleIds, tileHeights])
 
-  const onGridLayoutChange = useCallback(
+  const onGridDragStop = useCallback(
     (newLayout: Layout) => {
-      const visibleSet = new Set(visibleIds)
-      const filtered = newLayout.filter((item) => visibleSet.has(item.i as DashboardTileId))
-      const merged: ResponsiveLayouts = { ...layoutsFromStore, [breakpoint]: filtered }
-      persistDashboardLayouts(merged)
+      persistHomeBreakpointLayout(layoutsFromStore, breakpoint, newLayout)
     },
-    [layoutsFromStore, breakpoint, visibleIds],
+    [layoutsFromStore, breakpoint],
   )
-
-  const commitTileHeight = useCallback(
-    (tileId: DashboardTileId, h: number) => {
-      const next = setTileHeightInAllBreakpoints(layoutsFromStore, tileId, h)
-      persistDashboardLayouts(next)
-    },
-    [layoutsFromStore],
-  )
-
-  const [customizeOpen, setCustomizeOpen] = useState(false)
-  const customizePortalReady = typeof document !== 'undefined'
-
-  useEffect(() => {
-    if (!customizeOpen) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = prev
-    }
-  }, [customizeOpen])
 
   const jlRange = jlRangeLastTwoDays()
   const logs = useLogs(jlRange.start, jlRange.end, true)
@@ -210,6 +211,37 @@ export function DashboardPage() {
     }
     return next
   }, [pd, jc.data?.ps, js.data?.sn, nSta, manualQuickRunPid])
+
+  const masters = useMemo(
+    () => masterStationIds(optionsBlock as Record<string, unknown> | undefined),
+    [optionsBlock],
+  )
+  const nowRunning = useMemo(
+    () =>
+      buildNowRunning({
+        jc: jc.data,
+        sn: js.data?.sn ?? [],
+        stationNames,
+        pd,
+        nSta,
+        masters,
+        manualQuickRunPid,
+      }),
+    [jc.data, js.data?.sn, stationNames, pd, nSta, masters, manualQuickRunPid],
+  )
+  const nothingRunning = nowRunning.running.length === 0 && nowRunning.queued.length === 0
+  const nextRun = useMemo(
+    () =>
+      nothingRunning
+        ? findNextScheduledRun(
+            pd,
+            jc.data?.devt,
+            Number(jc.data?.sunrise ?? 360),
+            Number(jc.data?.sunset ?? 1080),
+          )
+        : null,
+    [nothingRunning, pd, jc.data?.devt, jc.data?.sunrise, jc.data?.sunset],
+  )
 
   const stopProgramStations = useCallback(
     async (pid: number) => {
@@ -304,8 +336,25 @@ export function DashboardPage() {
     }
   }
 
-  function renderTileBody(id: DashboardTileId) {
+  function renderTileBody(id: HomeTileId) {
     switch (id) {
+      case 'running':
+        return (
+          <NowRunningWidget
+            showSpinner={jc.isLoading && !jc.data}
+            running={nowRunning.running}
+            queued={nowRunning.queued}
+            fetchedAt={jc.dataUpdatedAt}
+            paused={Boolean(jc.data?.pq)}
+            next={nextRun}
+            is24Hour={prefs.is24Hour}
+            stopPending={manual.isPending || cv.isPending}
+            onStopZone={(z) =>
+              runAction(() => manual.mutateAsync({ sid: z.sid, en: 0 }), `${z.name} stopped.`)
+            }
+            onStopAll={() => runAction(() => cv.mutateAsync({ rsn: 1 }), 'All zones stopped.')}
+          />
+        )
       case 'controller':
         return (
           <ControllerWidget
@@ -366,76 +415,48 @@ export function DashboardPage() {
     }
   }
 
-  const customizeModal =
-    customizePortalReady && customizeOpen ? (
-      createPortal(
-        <div
-          className={styles.modalOverlay}
-          onClick={() => setCustomizeOpen(false)}
-          role="presentation"
+  const customizePanel = editing ? (
+    <Card className={styles.customizeCard} title="Customize Home">
+      <p className={styles.customizeHint}>
+        Drag the grip on a card to move it.
+        {singleColumn
+          ? ' Cards fit their content.'
+          : ' Cards fit their content; the arrows button sets an optional maximum height.'}
+      </p>
+      <ul className={styles.visibilityList}>
+        {tileOrder.map((id) => (
+          <li key={id} className={styles.visibilityRow}>
+            <label className={styles.visibilityLabel}>
+              <input
+                type="checkbox"
+                checked={visibility[id]}
+                disabled={visibility[id] && visibleCount <= 1}
+                onChange={(e) => {
+                  toggleHomeTileVisibility(visibility, id, e.target.checked)
+                }}
+              />
+              <span>{DASHBOARD_TILE_TITLES[id]}</span>
+            </label>
+          </li>
+        ))}
+      </ul>
+      <div className={styles.customizeActions}>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => {
+            resetHomeLayouts(tileOrder)
+            clearHomeTileMaxHeights()
+          }}
         >
-          <div
-            className={styles.modalPanel}
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Customize Home dashboard"
-          >
-            <Card
-              className={styles.modalCard}
-              title="Customize Home"
-              titleAction={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className={styles.modalCloseBtn}
-                  aria-label="Close"
-                  onClick={() => setCustomizeOpen(false)}
-                >
-                  ×
-                </Button>
-              }
-            >
-              <p className={styles.modalHint}>
-                Use the grip on each card to rearrange.<br />The gear on a card sets its height.
-              </p>
-              <ul className={styles.visibilityList}>
-                {tileOrder.map((id) => (
-                  <li key={id} className={styles.visibilityRow}>
-                    <label className={styles.visibilityLabel}>
-                      <input
-                        type="checkbox"
-                        checked={visibility[id]}
-                        disabled={visibility[id] && visibleCount <= 1}
-                        onChange={(e) => {
-                          const enabled = e.target.checked
-                          const next = visibilityWithToggle(visibility, id, enabled)
-                          if (!next) return
-                          persistDashboardTileVisibility(next)
-                        }}
-                      />
-                      <span>{DASHBOARD_TILE_TITLES[id]}</span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-              <div className={styles.modalActions}>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    persistDashboardLayouts(buildDefaultDashboardLayouts(visibleIds))
-                  }}
-                >
-                  Reset layout to defaults
-                </Button>
-              </div>
-            </Card>
-          </div>
-        </div>,
-        document.body,
-      )
-    ) : null
+          Reset layout to defaults
+        </Button>
+        <Button type="button" variant="primary" onClick={() => setEditing(false)}>
+          Done
+        </Button>
+      </div>
+    </Card>
+  ) : null
 
   return (
     <div>
@@ -444,14 +465,25 @@ export function DashboardPage() {
           <h1 className={styles.title}>Home</h1>
           <button
             type="button"
-            className={styles.homeSettingsBtn}
-            aria-label="Customize Home dashboard"
-            onClick={() => setCustomizeOpen(true)}
+            className={[styles.homeSettingsBtn, editing ? styles.homeSettingsBtnDone : '']
+              .filter(Boolean)
+              .join(' ')}
+            aria-label={editing ? 'Done customizing Home dashboard' : 'Customize Home dashboard'}
+            aria-pressed={editing}
+            onClick={() => setEditing((v) => !v)}
           >
-            <Settings size={18} aria-hidden />
+            {editing ? (
+              <>
+                <Check size={16} aria-hidden />
+                <span>Done</span>
+              </>
+            ) : (
+              <Settings size={18} aria-hidden />
+            )}
           </button>
         </div>
       </header>
+      {customizePanel}
       {msg ? <ErrorBox message={msg} /> : null}
       {actionErr ? <ErrorBox message={actionErr} /> : null}
       {actionMsg ? <p className={widgetStyles.ok}>{actionMsg}</p> : null}
@@ -459,48 +491,46 @@ export function DashboardPage() {
       <div ref={containerRef} className={styles.rglMeasure}>
         {mounted && width > 0 ? (
           <GridLayout
-            className={styles.rglRoot}
+            className={[styles.rglRoot, editing ? styles.rglRootEditing : ''].filter(Boolean).join(' ')}
             width={gridWidth}
             layout={layout}
             gridConfig={{
               cols,
-              rowHeight: 18,
-              margin: [16, 16],
+              rowHeight: 1,
+              margin: [16, 0],
               containerPadding: [0, 0],
             }}
             compactor={verticalCompactor}
             dragConfig={{
-              enabled: true,
+              enabled: editing,
               handle: `.${RGL_DRAG_HANDLE_CLASS}`,
               cancel: 'input, select, textarea, button, a',
               bounded: false,
               threshold: 3,
             }}
             resizeConfig={{ enabled: false }}
-            onLayoutChange={onGridLayoutChange}
+            onDragStop={onGridDragStop}
           >
-            {visibleIds.map((tileId) => {
-              const item = layout.find((x) => x.i === tileId)
-              const h = item?.h ?? DASHBOARD_TILE_DEFAULT_H[tileId]
-              const { minH, maxH } = DASHBOARD_TILE_ROW_BOUNDS[tileId]
-              return (
-                <div key={tileId}>
-                  <DashboardTile
-                    title={DASHBOARD_TILE_TITLES[tileId]}
-                    gridRowHeight={h}
-                    minH={minH}
-                    maxH={maxH}
-                    onCommitRowHeight={(nextH) => commitTileHeight(tileId, nextH)}
-                  >
-                    {renderTileBody(tileId)}
-                  </DashboardTile>
-                </div>
-              )
-            })}
+            {visibleIds.map((tileId) => (
+              <div key={tileId}>
+                <DashboardTile
+                  id={tileId}
+                  title={DASHBOARD_TILE_TITLES[tileId]}
+                  editing={editing}
+                  showHeightControl={!singleColumn}
+                  maxHeightPx={singleColumn ? null : (tileMaxHeights[tileId] ?? null)}
+                  minHeightPx={HOME_TILE_MAX_H_BOUNDS.min}
+                  maxHeightLimitPx={HOME_TILE_MAX_H_BOUNDS.max}
+                  onCommitMaxHeight={(px) => persistHomeTileMaxHeight(tileId, px)}
+                  onContentHeight={onTileContentHeight}
+                >
+                  {renderTileBody(tileId)}
+                </DashboardTile>
+              </div>
+            ))}
           </GridLayout>
         ) : null}
       </div>
-      {customizeModal}
     </div>
   )
 }

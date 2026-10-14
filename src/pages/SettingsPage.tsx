@@ -52,6 +52,16 @@ function stringifySettingJson(val: unknown): string {
   return String(val)
 }
 
+/** "-04:00" → "UTC−04:00" (firmware stores an offset only, so there is no city to show). */
+function formatUtcOffsetLabel(label: string): string {
+  if (/^[+-]00:00$/.test(label)) return 'UTC±00:00'
+  return `UTC${label.replace('-', '\u2212')}`
+}
+
+/** Last values loaded from the controller, used to detect unsaved edits per section. */
+type SystemBaseline = { tz: string; loc: string; lg: boolean }
+type WateringBaseline = { wl: string; uwt: number }
+
 function coJsonBlob(parsed: Record<string, unknown>): string {
   return JSON.stringify(parsed).slice(1, -1)
 }
@@ -212,6 +222,9 @@ export function SettingsPage() {
 
   const [maintBusy, setMaintBusy] = useState(false)
 
+  const [systemBase, setSystemBase] = useState<SystemBaseline | null>(null)
+  const [wateringBase, setWateringBase] = useState<WateringBaseline | null>(null)
+
   const hydratedOnce = useRef(false)
 
   const opts = ja.data?.options ?? {}
@@ -239,16 +252,20 @@ export function SettingsPage() {
     (data: JsonAll) => {
       const o = data.options ?? {}
       const s = data.settings ?? {}
-      setWl(String(o.wl ?? ''))
-      setLoc(String(s.loc ?? '').replace(/^''$/, ''))
+      const wlStr = String(o.wl ?? '')
+      const locStr = String(s.loc ?? '').replace(/^''$/, '')
+      setWl(wlStr)
+      setLoc(locStr)
       setMqtt(stringifySettingJson(s.mqtt))
       setEmail(stringifySettingJson(s.email))
       setOtc(stringifySettingJson(s.otc))
 
-      const tzStr = timezoneLabelFromTz(o.tz)
-      if (tzStr) setTimezoneLabel(tzStr)
+      const tzStr = timezoneLabelFromTz(o.tz) ?? '+00:00'
+      setTimezoneLabel(tzStr)
 
       setLg(o.lg === 1)
+      setSystemBase({ tz: tzStr, loc: locStr, lg: o.lg === 1 })
+      setWateringBase({ wl: wlStr, uwt: Number(o.uwt ?? 0) })
 
       setMas(Number(o.mas ?? 0))
       setMton(Number(o.mton ?? 0))
@@ -370,6 +387,67 @@ export function SettingsPage() {
 
   function locForDevice(): string {
     return loc.replace(/\s/g, '_')
+  }
+
+  // System section: one form, only changed fields are sent.
+  const tzDirty = opts.tz !== undefined && systemBase != null && timezoneLabel !== systemBase.tz
+  const locDirty = systemBase != null && loc !== systemBase.loc
+  const lgDirty = opts.lg !== undefined && systemBase != null && lg !== systemBase.lg
+  const systemDirty = tzDirty || locDirty || lgDirty
+
+  async function saveSystem() {
+    const p: Record<string, string | number | boolean> = {}
+    if (tzDirty) p.tz = tzValueFromTimezoneLabel(timezoneLabel)
+    if (locDirty) p.loc = locForDevice()
+    if (lgDirty) p.lg = lg ? 1 : 0
+    if (Object.keys(p).length === 0) return
+    await applyOptions(p)
+  }
+
+  function discardSystem() {
+    if (!systemBase) return
+    setTimezoneLabel(systemBase.tz)
+    setLoc(systemBase.loc)
+    setLg(systemBase.lg)
+  }
+
+  // Watering section: adjustment method + manual percentage share one save.
+  // The percentage is only editable (and only sent) while the method is Manual.
+  const wlLocked = opts.uwt !== undefined && uwt > 0
+  const uwtDirty = opts.uwt !== undefined && wateringBase != null && uwt !== wateringBase.uwt
+  const wlDirty = !wlLocked && wateringBase != null && wl !== wateringBase.wl
+  const wateringDirty = uwtDirty || wlDirty
+
+  async function saveWatering() {
+    const p: Record<string, string | number | boolean> = {}
+    if (uwtDirty) p.uwt = uwt
+    if (wlDirty) p.wl = parseInt(wl, 10) || 0
+    if (Object.keys(p).length === 0) return
+    await applyOptions(p)
+  }
+
+  function discardWatering() {
+    if (!wateringBase) return
+    setWl(wateringBase.wl)
+    setUwt(wateringBase.uwt)
+  }
+
+  function renderSaveBar(dirty: boolean, onSave: () => Promise<void>, onDiscard: () => void) {
+    return (
+      <div className={styles.saveBar}>
+        <Button variant="primary" disabled={!dirty || co.isPending} onClick={() => void onSave()}>
+          {co.isPending && dirty ? 'Saving…' : 'Save changes'}
+        </Button>
+        {dirty ? (
+          <>
+            <Button variant="ghost" disabled={co.isPending} onClick={onDiscard}>
+              Discard
+            </Button>
+            <span className={styles.dirtyHint}>Unsaved changes</span>
+          </>
+        ) : null}
+      </div>
+    )
   }
 
   const adjustmentChoices = useMemo(
@@ -545,18 +623,10 @@ export function SettingsPage() {
               >
                 {timezoneOptions.map((t) => (
                   <option key={t} value={t}>
-                    {t}
+                    {formatUtcOffsetLabel(t)}
                   </option>
                 ))}
               </select>
-              <Button
-                variant="secondary"
-                className={styles.saveBtn}
-                disabled={co.isPending}
-                onClick={() => void applyOptions({ tz: tzValueFromTimezoneLabel(timezoneLabel) })}
-              >
-                Save timezone
-              </Button>
             </div>
           ) : null}
           <div className={styles.field}>
@@ -568,9 +638,6 @@ export function SettingsPage() {
               placeholder="City, ZIP, or lat,lon"
             />
             <p className={styles.fieldHint}>Spaces are sent as underscores to the controller.</p>
-            <Button variant="secondary" disabled={co.isPending} onClick={() => void applyOptions({ loc: locForDevice() })}>
-              Save location
-            </Button>
           </div>
           {opts.lg !== undefined ? (
             <label className={styles.checkRow}>
@@ -578,11 +645,7 @@ export function SettingsPage() {
               Enable logging
             </label>
           ) : null}
-          {opts.lg !== undefined ? (
-            <Button variant="secondary" disabled={co.isPending} onClick={() => void applyOptions({ lg: lg ? 1 : 0 })}>
-              Save logging option
-            </Button>
-          ) : null}
+          {renderSaveBar(systemDirty, saveSystem, discardSystem)}
         </Card>
       </details>
 
@@ -809,33 +872,8 @@ export function SettingsPage() {
 
       <details className={styles.collapse}>
         <summary className={styles.collapseSummary}>Weather and Sensors</summary>
-        <Card variant="plain">
-          <div className={styles.field}>
-            <Label htmlFor="set-wl">Watering percentage</Label>
-            <Input
-              id="set-wl"
-              type="number"
-              min={0}
-              max={250}
-              value={wl}
-              onChange={(e) => setWl(e.target.value)}
-              disabled={opts.uwt !== undefined && uwt > 0}
-            />
-            <p className={styles.fieldHint}>
-              0–250%. Disabled while a weather adjustment method other than Manual is selected.
-            </p>
-          </div>
-          <Button
-            variant="secondary"
-            disabled={co.isPending || (opts.uwt !== undefined && uwt > 0)}
-            onClick={() => void applyOptions({ wl: parseInt(wl, 10) || 0 })}
-          >
-            Save watering percentage
-          </Button>
-        </Card>
-
-        {opts.uwt !== undefined ? (
-          <Card variant="plain" title="Weather adjustment">
+        <Card variant="plain" title="Watering adjustment">
+          {opts.uwt !== undefined ? (
             <div className={styles.field}>
               <Label htmlFor="uwt">Adjustment method</Label>
               <select id="uwt" className={styles.select} value={uwt} onChange={(e) => setUwt(Number(e.target.value))}>
@@ -846,11 +884,24 @@ export function SettingsPage() {
                 ))}
               </select>
             </div>
-            <Button variant="secondary" disabled={co.isPending} onClick={() => void applyOptions({ uwt })}>
-              Save adjustment method
-            </Button>
-          </Card>
-        ) : null}
+          ) : null}
+          <div className={styles.field}>
+            <Label htmlFor="set-wl">Watering percentage</Label>
+            <Input
+              id="set-wl"
+              type="number"
+              min={0}
+              max={250}
+              value={wl}
+              onChange={(e) => setWl(e.target.value)}
+              disabled={wlLocked}
+            />
+            <p className={styles.fieldHint}>
+              0–250%. Set automatically while a weather adjustment method other than Manual is selected.
+            </p>
+          </div>
+          {renderSaveBar(wateringDirty, saveWatering, discardWatering)}
+        </Card>
 
         {hasSensorUi ? (
           <Card variant="plain" title="Rain, flow & sensors">

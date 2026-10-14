@@ -93,7 +93,7 @@ import {
 } from '../lib/opensprinklerRuntime'
 import { isStationDisabled } from '../lib/stationDis'
 import { useAppPreferences } from '../lib/appPreferences'
-import { Card, Button, ErrorBox, Spinner, Label, Input } from '../components/ui'
+import { Card, Button, ErrorBox, Spinner, Label, Input, OverflowMenu } from '../components/ui'
 import { DurationInput } from '../components/DurationInput'
 import {
   CalendarDays,
@@ -187,6 +187,20 @@ function summarizeDays(flag: number, days0: number, days1: number): string {
   return `Once · ${epochDaysToIsoDate(ep)}`
 }
 
+/**
+ * Repeat settings of a repeating-type program (start type bit clear): start1 = count, start2 = interval
+ * minutes. Returns null when the program does not actually repeat (controller stores -1 / 0 there).
+ */
+function repeatInfo(
+  starts: [number, number, number, number],
+  fixed: boolean,
+): { count: number; intervalMin: number } | null {
+  if (fixed) return null
+  const count = Number.isFinite(starts[1]) ? Math.trunc(starts[1]) : 0
+  const intervalMin = Number.isFinite(starts[2]) ? Math.trunc(starts[2]) : 0
+  return count > 0 && intervalMin > 0 ? { count, intervalMin } : null
+}
+
 function summarizeStarts(starts: [number, number, number, number], fixed: boolean): string {
   if (fixed) {
     const parts = starts
@@ -194,8 +208,19 @@ function summarizeStarts(starts: [number, number, number, number], fixed: boolea
       .filter(Boolean) as string[]
     return parts.length > 0 ? parts.join(' · ') : 'No start times'
   }
+  if (isStartDisabled(starts[0])) return 'No start time'
   const first = formatStartTokenLabel(starts[0])
-  return `${first} · repeats ${starts[1]}× every ${starts[2]} min`
+  const rep = repeatInfo(starts, fixed)
+  return rep ? `${first}, then ${rep.count}× every ${rep.intervalMin} min` : first
+}
+
+/** Chip label for the start mode, kept consistent with `summarizeStarts`. */
+function startModeShort(starts: [number, number, number, number], fixed: boolean): string {
+  if (fixed) {
+    const n = starts.filter((v) => !isStartDisabled(v)).length
+    return n === 1 ? 'Fixed start time' : 'Fixed start times'
+  }
+  return repeatInfo(starts, fixed) ? 'Repeating runs' : 'Single start'
 }
 
 function dayTypeShort(flag: number): string {
@@ -555,6 +580,51 @@ function SortableProgramRow({
     .filter((z) => z.seconds > 0)
   const totalDurationSeconds = activeZones.reduce((sum, z) => sum + z.seconds, 0)
 
+  const displayName = name || `Program ${pid + 1}`
+  const repeating = !fixed && repeatInfo(starts, fixed) !== null
+
+  const menuItems = [
+    {
+      label: 'Duplicate as new',
+      onSelect: () => {
+        const row = cloneProgram(prog)
+        const copy = createEditorState(row, -1, nSta)
+        setEditor({
+          ...copy,
+          name: `${copy.name || `Program ${pid + 1}`} copy`,
+        })
+      },
+    },
+    {
+      label: uwt ? 'Turn off weather adjustment' : 'Turn on weather adjustment',
+      disabled: toggleUwt.isPending,
+      onSelect: () =>
+        void runAction(
+          () => toggleUwt.mutateAsync({ pid, uwt: uwt ? 0 : 1 }),
+          uwt ? 'Weather adjustment disabled.' : 'Weather adjustment enabled.',
+        ),
+    },
+    {
+      label: en ? 'Turn off program' : 'Turn on program',
+      disabled: toggleEn.isPending,
+      onSelect: () =>
+        void runAction(
+          () => toggleEn.mutateAsync({ pid, en: en ? 0 : 1 }),
+          en ? 'Program disabled.' : 'Program enabled.',
+        ),
+    },
+    {
+      label: 'Delete program',
+      danger: true,
+      disabled: del.isPending,
+      onSelect: () => {
+        if (window.confirm('Delete this program?')) {
+          void runAction(() => del.mutateAsync(pid), 'Program deleted.')
+        }
+      },
+    },
+  ]
+
   return (
     <div
       ref={setNodeRef}
@@ -562,28 +632,26 @@ function SortableProgramRow({
       className={`${styles.sortableRow} ${isDragging ? styles.sortableRowDragging : ''}`}
     >
       <Card
-        title={name || `Program ${pid + 1}`}
-        bodyClassName={en ? undefined : styles.programCardMuted}
+        title={displayName}
+        className={styles.programCard}
         titleAction={
           <div className={styles.programCardHeaderActions}>
-            <Button
-              variant={en ? 'danger' : 'cta'}
-              className={styles.cardHeaderToggle}
-              disabled={toggleEn.isPending}
-              onClick={() =>
-                runAction(
-                  () => toggleEn.mutateAsync({ pid, en: en ? 0 : 1 }),
-                  en ? 'Program disabled.' : 'Program enabled.',
-                )
+            <span
+              className={en ? styles.programStatusOn : styles.programStatusOff}
+              title={
+                en
+                  ? 'Program is enabled and can run on its schedule.'
+                  : 'Program is disabled and will not run.'
               }
             >
-              {en ? 'Turn off' : 'Turn on'}
-            </Button>
+              {en ? 'Enabled' : 'Disabled'}
+            </span>
+            <OverflowMenu items={menuItems} label={`More actions for ${displayName}`} />
             <button
               type="button"
               ref={setActivatorNodeRef}
               className={styles.dragHandle}
-              aria-label={`Drag to reorder ${name || `program ${pid + 1}`}`}
+              aria-label={`Drag to reorder ${displayName}`}
               {...attributes}
               {...listeners}
             >
@@ -605,145 +673,104 @@ function SortableProgramRow({
           </div>
         }
       >
-        <div className={styles.programSummaryBar}>
-          <span
-            className={en ? styles.programStatusOn : styles.programStatusOff}
-            title={
-              en
-                ? 'Program is enabled and can run on its schedule.'
-                : 'Program is disabled and will not run.'
-            }
-          >
-            {en ? 'Enabled' : 'Disabled'}
-          </span>
-          <span className={styles.programSummaryDivider} aria-hidden />
-          <div className={styles.programSummaryChipsWrap}>
-            <span className={styles.programSummaryLabel}>Runs as</span>
-            <ul className={styles.programSummaryList} aria-label="How this program is configured to run">
-              {uwt ? (
-                <li>
-                  <span className={styles.summaryChip}>
-                    <CloudSun className={styles.summaryChipIcon} size={13} aria-hidden />
-                    Weather adjust on
-                  </span>
-                </li>
-              ) : null}
+        {/* Only the summary is muted for disabled programs; actions below stay full strength. */}
+        <div className={en ? styles.programCardInfo : `${styles.programCardInfo} ${styles.programCardMuted}`}>
+          <ul className={styles.programSummaryList} aria-label="How this program is configured to run">
+            {uwt ? (
               <li>
                 <span className={styles.summaryChip}>
-                  <CalendarDays className={styles.summaryChipIcon} size={13} aria-hidden />
-                  {dayTypeShort(flag)}
+                  <CloudSun className={styles.summaryChipIcon} size={13} aria-hidden />
+                  Weather adjust on
                 </span>
               </li>
+            ) : null}
+            <li>
+              <span className={styles.summaryChip}>
+                <CalendarDays className={styles.summaryChipIcon} size={13} aria-hidden />
+                {dayTypeShort(flag)}
+              </span>
+            </li>
+            <li>
+              <span className={styles.summaryChip}>
+                {repeating ? (
+                  <Repeat className={styles.summaryChipIcon} size={13} aria-hidden />
+                ) : (
+                  <ListChecks className={styles.summaryChipIcon} size={13} aria-hidden />
+                )}
+                {startModeShort(starts, fixed)}
+              </span>
+            </li>
+            {rest ? (
+              <li>
+                <span className={styles.summaryChip}>{rest}</span>
+              </li>
+            ) : null}
+            {dr ? (
               <li>
                 <span className={styles.summaryChip}>
-                  {fixed ? (
-                    <ListChecks className={styles.summaryChipIcon} size={13} aria-hidden />
-                  ) : (
-                    <Repeat className={styles.summaryChipIcon} size={13} aria-hidden />
-                  )}
-                  {fixed ? 'Fixed start times' : 'Repeating runs'}
+                  <MapPin className={styles.summaryChipIcon} size={13} aria-hidden />
+                  Date range only
                 </span>
               </li>
-              {rest ? (
-                <li>
-                  <span className={styles.summaryChip}>{rest}</span>
-                </li>
-              ) : null}
-              {dr ? (
-                <li>
-                  <span className={styles.summaryChip}>
-                    <MapPin className={styles.summaryChipIcon} size={13} aria-hidden />
-                    Date range only
-                  </span>
-                </li>
-              ) : null}
-            </ul>
-          </div>
-        </div>
-        <div className={styles.programCardLayout}>
-          <div className={styles.programCardSchedule}>
-            <div className={styles.programMetaGrid}>
-              <div className={styles.programMetaCell}>
-                <CalendarDays className={styles.programMetaIcon} size={15} aria-hidden />
-                <div className={styles.programMetaBody}>
-                  <span className={styles.programMetaLabel}>Days</span>
-                  <span className={styles.programMetaValue}>{summarizeDays(flag, days0, days1)}</span>
-                </div>
-              </div>
-              <div className={styles.programMetaCell}>
-                <Clock3 className={styles.programMetaIcon} size={15} aria-hidden />
-                <div className={styles.programMetaBody}>
-                  <span className={styles.programMetaLabel}>Starts</span>
-                  <span className={styles.programMetaValue}>{summarizeStarts(starts, fixed)}</span>
-                </div>
-              </div>
-              <div className={styles.programMetaCell}>
-                <Timer className={styles.programMetaIcon} size={15} aria-hidden />
-                <div className={styles.programMetaBody}>
-                  <span className={styles.programMetaLabel}>Total duration</span>
-                  <span className={styles.programMetaValue}>{formatDuration(totalDurationSeconds)}</span>
-                </div>
-              </div>
-              {dr ? (
-                <div className={`${styles.programMetaCell} ${styles.programMetaCellWide}`}>
-                  <MapPin className={styles.programMetaIcon} size={15} aria-hidden />
+            ) : null}
+          </ul>
+          <div className={styles.programCardLayout}>
+            <div className={styles.programCardSchedule}>
+              <div className={styles.programMetaGrid}>
+                <div className={styles.programMetaCell}>
+                  <CalendarDays className={styles.programMetaIcon} size={15} aria-hidden />
                   <div className={styles.programMetaBody}>
-                    <span className={styles.programMetaLabel}>Date range</span>
-                    <span className={styles.programMetaValue}>
-                      {formatOsDateMmDd(range[1])} → {formatOsDateMmDd(range[2])}
-                    </span>
+                    <span className={styles.programMetaLabel}>Days</span>
+                    <span className={styles.programMetaValue}>{summarizeDays(flag, days0, days1)}</span>
                   </div>
                 </div>
-              ) : null}
+                <div className={styles.programMetaCell}>
+                  <Clock3 className={styles.programMetaIcon} size={15} aria-hidden />
+                  <div className={styles.programMetaBody}>
+                    <span className={styles.programMetaLabel}>Starts</span>
+                    <span className={styles.programMetaValue}>{summarizeStarts(starts, fixed)}</span>
+                  </div>
+                </div>
+                <div className={styles.programMetaCell}>
+                  <Timer className={styles.programMetaIcon} size={15} aria-hidden />
+                  <div className={styles.programMetaBody}>
+                    <span className={styles.programMetaLabel}>Total</span>
+                    <span className={styles.programMetaValue}>{formatDuration(totalDurationSeconds)}</span>
+                  </div>
+                </div>
+                {dr ? (
+                  <div className={`${styles.programMetaCell} ${styles.programMetaCellWide}`}>
+                    <MapPin className={styles.programMetaIcon} size={15} aria-hidden />
+                    <div className={styles.programMetaBody}>
+                      <span className={styles.programMetaLabel}>Date range</span>
+                      <span className={styles.programMetaValue}>
+                        {formatOsDateMmDd(range[1])} → {formatOsDateMmDd(range[2])}
+                      </span>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
-          </div>
-          <div className={styles.programCardZones}>
-            <p className={styles.cardSectionTitle}>Zones</p>
-            <div className={styles.zoneDurations}>
-              {activeZones.length === 0 ? (
-                <p className={styles.meta}>No active zones in this program.</p>
-              ) : (
-                activeZones.map(({ idx, seconds }) => (
-                  <span
-                    key={idx}
-                    className={`${styles.durationPill} ${isStationDisabled(stnDis, idx) ? styles.pillMuted : ''}`}
-                  >
-                    {stationDisplayName(idx, stationNames, showStationNum)}: {formatDuration(seconds)}
-                  </span>
-                ))
-              )}
+            <div className={styles.programCardZones}>
+              <p className={styles.cardSectionTitle}>Zones</p>
+              <div className={styles.zoneDurations}>
+                {activeZones.length === 0 ? (
+                  <p className={styles.meta}>No active zones in this program.</p>
+                ) : (
+                  activeZones.map(({ idx, seconds }) => (
+                    <span
+                      key={idx}
+                      className={`${styles.durationPill} ${isStationDisabled(stnDis, idx) ? styles.pillMuted : ''}`}
+                    >
+                      {stationDisplayName(idx, stationNames, showStationNum)}: {formatDuration(seconds)}
+                    </span>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
         <div className={styles.programCardActions}>
-          <p className={styles.cardSectionTitle}>Actions</p>
-          <div className={styles.actions}>
-          <Button
-            variant="secondary"
-            disabled={toggleUwt.isPending}
-            onClick={() =>
-              runAction(
-                () => toggleUwt.mutateAsync({ pid, uwt: uwt ? 0 : 1 }),
-                uwt ? 'Weather adjustment disabled.' : 'Weather adjustment enabled.',
-              )
-            }
-          >
-            {uwt ? 'Weather off' : 'Weather on'}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => {
-              const row = cloneProgram(prog)
-              const copy = createEditorState(row, -1, nSta)
-              setEditor({
-                ...copy,
-                name: `${copy.name || `Program ${pid + 1}`} copy`,
-              })
-            }}
-          >
-            Duplicate as new
-          </Button>
           {programRunning ? (
             <Button
               variant="danger"
@@ -753,25 +780,13 @@ function SortableProgramRow({
               Stop
             </Button>
           ) : (
-            <Button variant="secondary" disabled={runNowBlocked} onClick={() => onRunNow(pid)}>
+            <Button variant="primary" disabled={runNowBlocked} onClick={() => onRunNow(pid)}>
               Run now
             </Button>
           )}
           <Button variant="secondary" onClick={() => setEditor(createEditorState(prog, pid, nSta))}>
             Edit
           </Button>
-          <Button
-            variant="danger"
-            disabled={del.isPending}
-            onClick={async () => {
-              if (window.confirm('Delete this program?')) {
-                await runAction(() => del.mutateAsync(pid), 'Program deleted.')
-              }
-            }}
-          >
-            Delete
-          </Button>
-          </div>
         </div>
       </Card>
     </div>

@@ -107,26 +107,28 @@
   gap: var(--space-md);
 }
 
-/* Disabled programs (Off): match muted zone cards */
+/* Program list card: compact body; the overflow menu must escape the card's clipping. */
+.sortableRow .programCard {
+  overflow: visible;
+}
+
+.sortableRow .programCard > :first-child {
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.sortableRow .programCard > :last-child {
+  padding: 0.75rem 0.9rem;
+}
+
+/* Disabled programs: mute the summary only — actions keep full strength. */
 .programCardMuted {
-  opacity: 0.48;
+  opacity: 0.55;
 }
 
-.cardHeaderToggle {
-  padding: 0.4rem 0.85rem;
-  font-size: var(--text-small);
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.programSummaryBar {
+.programCardInfo {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 0.55rem 0.75rem;
-  margin-bottom: 0.85rem;
-  padding-bottom: 0.75rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
+  flex-direction: column;
+  gap: 0.6rem;
 }
 
 .programStatusOn,
@@ -134,11 +136,11 @@
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  font-size: 0.72rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 0.3rem 0.6rem;
+  padding: 0.2rem 0.5rem;
   border-radius: 999px;
   border: 1px solid transparent;
 }
@@ -153,34 +155,6 @@
   background: color-mix(in srgb, var(--color-muted) 12%, var(--color-elevated));
   color: var(--color-muted);
   border-color: var(--color-border);
-}
-
-.programSummaryDivider {
-  width: 1px;
-  min-height: 1.15rem;
-  margin-top: 0.2rem;
-  align-self: stretch;
-  max-height: 1.75rem;
-  background: color-mix(in srgb, var(--color-border) 85%, transparent);
-  flex-shrink: 0;
-}
-
-.programSummaryChipsWrap {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem 0.55rem;
-  min-width: 0;
-  flex: 1;
-}
-
-.programSummaryLabel {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-  flex-shrink: 0;
 }
 
 .programSummaryList {
@@ -211,25 +185,6 @@
   flex-shrink: 0;
   color: var(--color-muted);
   opacity: 0.92;
-}
-
-@media (max-width: 520px) {
-  .programSummaryDivider {
-    display: none;
-  }
-
-  .programSummaryBar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
-  }
-
-  .programSummaryChipsWrap {
-    padding-left: 0;
-    border-top: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
-    padding-top: 0.55rem;
-    margin-top: 0.1rem;
-  }
 }
 
 .meta {
@@ -279,9 +234,8 @@
 .programCardLayout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--space-lg) var(--space-xl);
+  gap: var(--space-md) var(--space-xl);
   align-items: start;
-  margin-top: 0.15rem;
 }
 
 .programCardSchedule {
@@ -295,7 +249,7 @@
 }
 
 .programCardZones .cardSectionTitle {
-  margin-top: 0;
+  margin: 0 0 0.35rem;
   text-align: right;
 }
 
@@ -312,7 +266,7 @@
 .programMetaGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-md) var(--space-lg);
+  gap: var(--space-sm) var(--space-lg);
 }
 
 .programMetaCell {
@@ -327,24 +281,13 @@
 }
 
 .programCardActions {
-  margin-top: var(--space-lg);
-  padding-top: var(--space-md);
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
-}
-
-.programCardActions .cardSectionTitle {
-  margin-top: 0;
-  margin-bottom: 0.4rem;
-}
-
-.programCardActions .actions {
-  margin-top: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-sm);
+  margin-top: 0.75rem;
 }
 
-.programCardActions .actions > button {
+.programCardActions > button {
   width: 100%;
   justify-content: center;
 }
@@ -358,14 +301,12 @@
 @media (max-width: 640px) {
   .programCardLayout {
     grid-template-columns: 1fr;
-    gap: var(--space-md);
+    gap: 0.6rem;
   }
 
   .programCardZones {
     padding-left: 0;
     border-left: none;
-    padding-top: var(--space-md);
-    border-top: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
   }
 
   .programCardZones .cardSectionTitle,
@@ -377,8 +318,21 @@
     justify-content: flex-start;
   }
 
+  /* Phone: label and value on one line per row instead of stacked. */
   .programMetaGrid {
     grid-template-columns: 1fr;
+    gap: 0.3rem;
+  }
+
+  .programMetaGrid .programMetaBody {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .programMetaGrid .programMetaLabel {
+    flex: 0 0 auto;
+    min-width: 3.6rem;
   }
 }
 
@@ -989,6 +943,12 @@
   z-index: 0;
 }
 
+/* Lift the row with an open overflow menu above its siblings (each row is its own stacking context). */
+.sortableRow:has([aria-expanded='true']),
+.sortableRow:focus-within {
+  z-index: 2;
+}
+
 .sortableRowDragging {
   opacity: 0.35;
   z-index: 1;
@@ -997,7 +957,7 @@
 .programCardHeaderActions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .dragHandle {
