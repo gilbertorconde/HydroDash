@@ -1,104 +1,61 @@
-# Contributing dashboard widgets
+# Contributing Home cards
 
-This guide is for adding a **Home** dashboard tile: a React component shown inside the draggable grid, with visibility and layout persisted in the browser.
+This guide is for adding a card to the **Home** page. Home is a live *Now running* hero (`HomeHero`) followed by a responsive grid of cards; users can show/hide and reorder cards in **Customize Home** (an Advanced section at the bottom of the page).
 
 ## 1. Fork and branch
 
 1. Fork this repository on GitHub (use your fork as `origin`; add the canonical repo as `upstream` if you plan to sync often).
-2. Clone your fork. Git uses the **repository name** as the default folder (e.g. **`HydroDash`**).
+2. Clone your fork and create a branch from the repository root (the folder with **`package.json`**):
 
    ```bash
    cd HydroDash
-   git checkout -b feature/my-dashboard-widget
+   git checkout -b feature/my-home-card
    ```
 
-3. Do all widget work from **`HydroDash/`** (the root of that clone: the folder that contains **`package.json`**, where the npm package name is **`hydrodash`**).
-
-## 2. Where widgets live
+## 2. Where Home lives
 
 | Location | Role |
 | -------- | ---- |
-| `src/components/widgets/` | Tile **body** components (e.g. `ControllerWidget.tsx`, `QuickRunWidget.tsx`). |
-| `src/components/widgets/dashboardWidgets.module.css` | Shared styles for widgets; you can add a co-located `MyWidget.module.css` if needed. |
-| `src/components/widgets/index.ts` | Barrel exports for widgets and shared helpers. |
-| `src/pages/DashboardPage.tsx` | Wires the grid: fetches data, calls `renderTileBody`, wraps each tile in `DashboardTile`. |
+| `src/pages/DashboardPage.tsx` | Fetches data, renders the hero and the card grid (`renderCard`). |
+| `src/components/widgets/` | Hero and card components (`HomeHero.tsx`, `UpNextCard.tsx`, `ConditionsCard.tsx`, …). |
+| `src/components/widgets/dashboardShared.ts` | Shared helpers (now-running / queue builders, next scheduled run, time formatting on the controller clock). |
+| `src/components/widgets/dashboardWidgets.module.css` | Shared card styles. |
+| `src/lib/homeDashboardLayout.ts` | Card registry, default order/visibility, persisted Customize Home state. |
 
-The shell around every tile is **`DashboardTile`** (`DashboardTile.tsx`): title, optional height editor (cog), and the drag handle class **`RGL_DRAG_HANDLE_CLASS`** for react-grid-layout. Your widget only fills the **card body**.
+## 3. Adding a card
 
-## 3. Tile ID and registration checklist
+Pick a **stable id** (lowercase, no spaces), e.g. `flow`.
 
-Pick a **stable string id** (lowercase, no spaces), e.g. `raindelay`. It becomes a `DashboardTileId` and must stay consistent across files.
+1. **`src/lib/homeDashboardLayout.ts`**
+   - Append the id to **`HOME_CARD_IDS`** (array order = default order for new users).
+   - Add its label to **`HOME_CARD_TITLES`** (shown in Customize Home).
+   - Add it to **`HOME_WIDE_CARDS`** if it should span two columns on the 3-column desktop grid.
+   - Existing users get the new card automatically; saved order/visibility is merged with defaults on read.
+2. **Component** — create e.g. `src/components/widgets/FlowCard.tsx` built on the shared `Card` from `src/components/ui.tsx` (title, optional `icon`, `subtitle`, `titleAction` link). Accept a `className` prop and pass it to `Card` so wide cards span correctly. Export it from **`src/components/widgets/index.ts`**.
+3. **`src/pages/DashboardPage.tsx`** — add a `case 'flow':` to `renderCard` and pass the data it needs. Prefer React Query hooks the page already uses (`useController`, `useJsonAll`, `useStationStatus`, …) and keep cards mostly presentational.
 
-Add the id and metadata in this order (TypeScript will guide you if any `Record<DashboardTileId, …>` is incomplete):
+## 4. Design rules
 
-1. **`src/lib/dashboardTileOrder.ts`**  
-   Append the id to **`DASHBOARD_TILE_IDS`**.  
-   `DashboardTileId` is derived from this array; order here is the default order for new users.
-
-2. **`src/components/widgets/tileTitles.ts`**  
-   Add **`DASHBOARD_TILE_TITLES[id]`**: short label shown in the card header and in **Customize Home**.
-
-3. **`src/lib/dashboardRglLayout.ts`**  
-   - **`DASHBOARD_TILE_DEFAULT_H`**: default grid **height in rows** when the tile is placed or reset.  
-   - **`DASHBOARD_TILE_ROW_BOUNDS`**: **`minH` / `maxH`** for the cog “height in rows” editor.
-
-4. **`src/lib/dashboardTileVisibility.ts`**  
-   In **`defaultVisibility()`**, set **`[id]: true`** (or `false` if the tile should start hidden).
-
-5. **New component**, e.g. `src/components/widgets/RainDelayWidget.tsx`.  
-   Export it from **`src/components/widgets/index.ts`**.
-
-6. **`src/pages/DashboardPage.tsx`**  
-   - Import your widget.  
-   - Add a **`case 'yourid':`** in **`renderTileBody`** and return your component with the props it needs.  
-   - Pass data via React Query hooks already used on the page, or add hooks there and thread props down (keep widgets mostly presentational when possible).
-
-### Persisted layout and migrations
-
-Layouts live in **`localStorage`** under keys such as `hydrodash.dashboardRglLayouts.2`. Adding a tile does not require users to clear storage: **`normalizeDashboardLayoutsForVisible`** appends default positions for ids that appear in the layout store for the first time. If you ever **remove** or **rename** a tile id, consider documenting a one-time “Reset layout to defaults” in **Customize Home** for affected users.
-
-## 4. API surface for widget code
-
-### Data and actions
-
-- **`src/api/hooks.ts`**: React Query hooks (`useController`, `useJsonAll`, `useStationsMeta`, `useRunProgram`, `useManualStation`, …). Prefer the same patterns as existing widgets.
-- **`src/api/client.ts` / `src/api/types.ts`**: lower-level client and shared types if you need something not wrapped by a hook yet.
-
-### UI building blocks
-
-- **`src/components/ui/`**: `Card`, `Button`, `Input`, `Spinner`, `ErrorBox`, etc.
-
-### Shared dashboard helpers
-
-- **`src/components/widgets/dashboardShared.ts`**: re-exported from `index.ts` for bits like program/zone helpers used by multiple tiles.
-
-### Styling
-
-- Reuse **`dashboardWidgets.module.css`** classes (`styles.dl`, `styles.ok`, …) so the Home dashboard stays visually consistent.
-- Follow existing spacing and typography; avoid fixed heights that fight the resizable tile body unless necessary.
-
-### Drag-and-drop
-
-Do not remove or cover the grip that uses **`RGL_DRAG_HANDLE_CLASS`**. It is required for reordering. Interactive controls should live in the card body; the dashboard passes **`cancel: 'input, select, textarea, button, a'`** so dragging does not start from those elements.
+- Use the shared building blocks in **`src/components/ui.tsx`** (`Card`, `Button`, `Pill`, `StatTile`, `ListRow`, `EmptyState`, `AdvancedSection`, …) and semantic CSS tokens only (`var(--color-*)`, `--space-*`, `--radius-*`) so the card works in **light and dark**.
+- Everyday information first; anything installer-level goes in an **`AdvancedSection`**.
+- Destructive actions are red, go in an `OverflowMenu` (`⋯`), and must be confirmed with **`useConfirm()`** (`src/components/confirmContext.ts`) — never `window.confirm`.
+- Report action results with **`useToast()`** (`src/components/toastContext.ts`) instead of inline banners.
+- Controller timestamps are the controller's local wall clock encoded as UTC: format them with the helpers in `dashboardShared.ts` / `src/lib/formatLocale.ts`, not `new Date().toLocaleString()` in the browser zone.
+- Cards size to their content — avoid fixed heights and inner scrolling.
 
 ## 5. Quality checks before you open a PR
 
-From **`HydroDash/`** (repository root, where you run the dev server):
-
 ```bash
 npm run lint
-npx tsc --noEmit
+npx tsc --noEmit -p tsconfig.app.json
 ```
 
-Run **`npm run dev`**, open **Home**, toggle your tile in **Customize Home**, drag it, and change height with the cog.
+Run **`npm run dev`**, open **Home**, toggle and reorder your card in **Customize Home**, and check it on a phone-sized and a desktop window in light and dark mode. No controller? See *Local development* in the README for the OpenSprinkler demo firmware in Docker.
 
 ## 6. Opening a pull request
 
 1. Push your branch to your fork and open a PR against the upstream default branch.
-2. In the description, include:
-   - **What** the widget shows or does.
-   - **Which OpenSprinkler / firmware behaviors** you relied on (if any).
-   - **Screenshots** of the tile on Home (helpful for review).
-3. Keep the diff focused: one widget (plus registration wiring) per PR when possible.
+2. In the description, include **what** the card shows or does, **which OpenSprinkler / firmware behaviour** you relied on, and **screenshots** (phone + desktop, light + dark).
+3. Keep the diff focused: one card (plus registration wiring) per PR when possible.
 
 If you are unsure about a new API hook or server route for the controller, open an issue first so maintainers can agree on the shape before you build the UI.

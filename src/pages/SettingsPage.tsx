@@ -14,11 +14,11 @@ import {
   SlidersHorizontal,
   TriangleAlert,
   Workflow,
-  X,
   Zap,
 } from 'lucide-react'
 import { useChangeOptions, useController, useJsonAll, useNotificationsConfig } from '../api/hooks'
 import { NotificationsSettingsModal } from '../components/NotificationsSettingsModal'
+import { useToast } from '../components/toastContext'
 import {
   Card,
   EmptyState,
@@ -66,8 +66,6 @@ const SECTION_ICONS: Record<SettingsSectionId, ReactNode> = {
   danger: <TriangleAlert {...ICON} aria-hidden />,
 }
 
-type Status = { kind: 'ok' | 'error'; text: string }
-
 function formatFirmware(fwv: unknown): string | null {
   const n = typeof fwv === 'number' ? fwv : Number(fwv)
   if (!Number.isFinite(n) || n <= 0) return null
@@ -85,18 +83,11 @@ export function SettingsPage({ section }: { section?: SettingsSectionId }) {
   const navigate = useNavigate()
   const notifConfig = useNotificationsConfig()
   const [notifOpen, setNotifOpen] = useState(false)
-  const [status, setStatus] = useState<Status | null>(null)
+  const toast = useToast()
   // Bumped by "Reload from controller" to remount sections and drop unsaved edits.
   const [reloadNonce, setReloadNonce] = useState(0)
 
   const meta = section ? SECTION_META[section] : null
-
-  // Success messages fade on their own; errors stay until dismissed.
-  useEffect(() => {
-    if (status?.kind !== 'ok') return
-    const t = window.setTimeout(() => setStatus(null), 4000)
-    return () => window.clearTimeout(t)
-  }, [status])
 
   useEffect(() => {
     window.scrollTo({ top: 0 })
@@ -105,18 +96,17 @@ export function SettingsPage({ section }: { section?: SettingsSectionId }) {
   const { refetch: refetchJa } = ja
   const apply = useCallback(
     async (p: OptionPayload, okMessage = 'Saved.') => {
-      setStatus(null)
       try {
         await co.mutateAsync(p)
         await refetchJa()
-        setStatus({ kind: 'ok', text: okMessage })
+        toast.success(okMessage)
         return true
       } catch (e) {
-        setStatus({ kind: 'error', text: e instanceof Error ? e.message : 'Save failed' })
+        toast.error(e instanceof Error ? e.message : 'Save failed')
         return false
       }
     },
-    [co, refetchJa],
+    [co, refetchJa, toast],
   )
 
   const ctx = useMemo<SectionCtx | null>(() => {
@@ -127,16 +117,15 @@ export function SettingsPage({ section }: { section?: SettingsSectionId }) {
       st: ja.data.settings ?? {},
       apply,
       saving: co.isPending,
-      notify: (text) => setStatus({ kind: 'ok', text }),
-      fail: (text) => setStatus({ kind: 'error', text }),
+      notify: toast.success,
+      fail: toast.error,
     }
-  }, [ja.data, apply, co.isPending])
+  }, [ja.data, apply, co.isPending, toast])
 
   async function reloadFromController() {
-    setStatus(null)
     await Promise.all([ja.refetch(), jc.refetch()])
     setReloadNonce((n) => n + 1)
-    setStatus({ kind: 'ok', text: 'Reloaded from controller.' })
+    toast.success('Reloaded from controller.')
   }
 
   function open(id: SettingsSectionId) {
@@ -319,18 +308,6 @@ export function SettingsPage({ section }: { section?: SettingsSectionId }) {
           <div className={styles.detail}>{renderDetail()}</div>
         </div>
       </PageBody>
-
-      {status ? (
-        <div
-          className={`${styles.toast} ${status.kind === 'error' ? styles.toastError : styles.toastOk}`}
-          role={status.kind === 'error' ? 'alert' : 'status'}
-        >
-          <span>{status.text}</span>
-          <button type="button" className={styles.toastClose} aria-label="Dismiss" onClick={() => setStatus(null)}>
-            <X size={16} aria-hidden />
-          </button>
-        </div>
-      ) : null}
 
       {notifOpen ? (
         <NotificationsSettingsModal

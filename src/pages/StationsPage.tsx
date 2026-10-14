@@ -27,6 +27,8 @@ import {
   Spinner,
   Switch,
 } from '../components/ui'
+import { useConfirm } from '../components/confirmContext'
+import { useToast } from '../components/toastContext'
 import { DurationInput } from '../components/DurationInput'
 import {
   CONTROLLER_ACTION_UI_TIMEOUT_MS,
@@ -135,6 +137,8 @@ export function StationsPage() {
   const manual = useManualStation()
   const changeStations = useChangeStations()
   const changeValues = useChangeValues()
+  const confirm = useConfirm()
+  const toast = useToast()
   const pauseQueue = usePauseQueue()
 
   const snArr = useMemo(() => js.data?.sn ?? [], [js.data?.sn])
@@ -205,8 +209,6 @@ export function StationsPage() {
   ])
 
   const [durations, setDurations] = useState<Record<number, number>>({})
-  const [actionMsg, setActionMsg] = useState<string | null>(null)
-  const [actionErr, setActionErr] = useState<string | null>(null)
   const [startingSid, setStartingSid] = useState<number | null>(null)
   /** Zone whose "Rename & details" sheet is open. */
   const [editSid, setEditSid] = useState<number | null>(null)
@@ -241,14 +243,12 @@ export function StationsPage() {
 
   /** Runs a controller action and reports it; resolves to whether it succeeded. */
   async function runAction(task: () => Promise<unknown>, successMessage: string): Promise<boolean> {
-    setActionErr(null)
-    setActionMsg(null)
     try {
       await task()
-      setActionMsg(successMessage)
+      toast.success(successMessage)
       return true
     } catch (e) {
-      setActionErr(e instanceof Error ? e.message : 'Zone action failed')
+      toast.error(e instanceof Error ? e.message : 'Zone action failed')
       return false
     }
   }
@@ -321,8 +321,14 @@ export function StationsPage() {
                   label: 'Stop all zones',
                   danger: true,
                   disabled: changeValues.isPending,
-                  onSelect: () => {
-                    if (!window.confirm('Stop every running zone and clear the watering queue?')) return
+                  onSelect: async () => {
+                    const ok = await confirm({
+                      title: 'Stop all zones?',
+                      message: 'Every running zone stops and the watering queue is cleared.',
+                      confirmLabel: 'Stop all',
+                      tone: 'danger',
+                    })
+                    if (!ok) return
                     void runAction(() => changeValues.mutateAsync({ rsn: 1 }), 'All zones stopped.')
                   },
                 },
@@ -333,12 +339,6 @@ export function StationsPage() {
       />
       <PageBody>
         {errMsg ? <ErrorBox message={errMsg} /> : null}
-        {actionErr ? <ErrorBox message={actionErr} /> : null}
-        {actionMsg ? (
-          <p className={styles.ok} role="status">
-            {actionMsg}
-          </p>
-        ) : null}
         {loading ? <Spinner /> : null}
         {!loading && zoneRows.length === 0 && n > 0 ? (
           <EmptyState
@@ -409,12 +409,15 @@ export function StationsPage() {
                   )
                 }
                 onEdit={() => setEditSid(sid)}
-                onToggleDisabled={() => {
+                onToggleDisabled={async () => {
                   if (
                     !disabled &&
-                    !window.confirm(
-                      `Disable “${nameBase}”? It will not run from programs or manual start until you enable it again.`,
-                    )
+                    !(await confirm({
+                      title: `Disable “${nameBase}”?`,
+                      message: 'It will not run from programs or manual start until you enable it again.',
+                      confirmLabel: 'Disable zone',
+                      tone: 'danger',
+                    }))
                   ) {
                     return
                   }

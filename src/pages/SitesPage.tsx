@@ -1,12 +1,14 @@
 import { CheckCircle2, Router } from 'lucide-react'
 import { useAuthSession, useSwitchSite } from '../api/hooks'
 import { MoreSubpageLayout } from '../components/MoreSubpageLayout'
-import { AdvancedSection, Button, Card, EmptyState, ErrorBox, ListGroup, ListRow, Pill, Spinner } from '../components/ui'
+import { AdvancedSection, Button, Card, EmptyState, ListGroup, ListRow, Pill, Spinner } from '../components/ui'
+import { useToast } from '../components/toastContext'
 import styles from './SitesPage.module.css'
 
 export function SitesPage() {
   const auth = useAuthSession()
   const switchSite = useSwitchSite()
+  const toast = useToast()
 
   const sites = auth.data?.sites ?? []
   const active = auth.data?.activeSiteId
@@ -62,7 +64,12 @@ export function SitesPage() {
                         size="sm"
                         className={styles.useBtn}
                         disabled={switchSite.isPending}
-                        onClick={() => switchSite.mutate(s.id)}
+                        onClick={() =>
+                          switchSite.mutate(s.id, {
+                            onSuccess: () => toast.success(`Now using ${s.label}.`),
+                            onError: (e) => toast.error(e instanceof Error ? e.message : 'Switch failed'),
+                          })
+                        }
                       >
                         Use this controller
                       </Button>
@@ -72,9 +79,6 @@ export function SitesPage() {
               )
             })}
           </ListGroup>
-          {switchSite.isError ? (
-            <ErrorBox message={switchSite.error instanceof Error ? switchSite.error.message : 'Switch failed'} />
-          ) : null}
         </>
       )}
 

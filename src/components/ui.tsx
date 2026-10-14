@@ -56,9 +56,9 @@ export function Button({
   endIcon,
   className,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  /** `glass` is for buttons sitting on the blue page hero. */
-  variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'cta' | 'glass' | 'light'
+}: React.ComponentPropsWithRef<'button'> & {
+  /** `glass` is for buttons sitting on the blue page hero; `dangerSolid` confirms destructive actions. */
+  variant?: 'primary' | 'secondary' | 'danger' | 'dangerSolid' | 'ghost' | 'cta' | 'glass' | 'light'
   size?: 'sm' | 'md' | 'lg'
   startIcon?: ReactNode
   endIcon?: ReactNode

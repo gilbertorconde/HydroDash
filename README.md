@@ -3,49 +3,54 @@
   HydroDash
 </h1>
 
-Independent modern frontend for OpenSprinkler controllers. The npm package name in `package.json` is **hydrodash**; a default `git clone` of this repo creates a **HydroDash** directory.
+A modern, mobile-first web app for **OpenSprinkler** irrigation controllers — water a zone in two taps, see what's running from your lock screen notifications, and keep the installer-level settings out of the way until you need them.
 
-**Stack:** [TanStack Start](https://tanstack.com/start) (Vite + SSR), React 19, React Query, file-based routing. OpenSprinkler API access goes through server routes under `/api/os/*`; browser login uses cookie sessions (`/api/auth/*`).
+The npm package name in `package.json` is **hydrodash**; a default `git clone` of this repo creates a **HydroDash** directory.
+
+**Stack:** [TanStack Start](https://tanstack.com/start) (Vite + SSR), React 19, React Query, file-based routing. OpenSprinkler API access goes through server routes under `/api/os/*` (your controller password never reaches the browser); browser login uses cookie sessions (`/api/auth/*`). Push notifications are sent by a small worker to [ntfy](https://ntfy.sh).
+
+![HydroDash home on desktop and phone](docs/screenshot-home.png)
+
+---
+
+## Features
+
+- **Home** — a live *Now running* header (zone, countdown, progress, stop / pause; several zones at once), what's up next, conditions (watering level, rain delay, sensors, sunrise/sunset, weather readings when your provider sends them), one-tap rain delay, quick program runs, recent activity and controller status. Cards can be hidden and reordered (*Customize Home*).
+- **Zones** — start any zone with 5/10/15/30-minute chips or a custom duration, live countdown on the running zone, rename and enable/disable, station attributes.
+- **Programs** — clear program cards, run now / run once, a program editor with everyday fields up front and advanced scheduling (interval, odd/even, repeats, sunrise/sunset starts, date ranges) tucked away, and a day *Schedule preview*.
+- **History** — table or timeline of what ran, grouped by day or zone, with export.
+- **Weather** — watering level, adjustment method and status, live readings, provider and API key.
+- **Sensors** — extended analog sensors (live values, charts, editor) on firmware that supports them.
+- **Settings** — split into **Basic** (location & time, watering, app preferences) and **Advanced** (master valves, stations, sensor wiring, integrations — MQTT / email / IFTTT / OTC, LCD, network, power, logging, security incl. password change, and a *Danger zone*).
+- **Notifications** — in-app inbox plus ntfy push for zone/program starts and stops, rain delay, sensors, weather errors and *controller unreachable / back online* alerts.
+- **More** — backup & restore (controller and app settings), multiple controllers, diagnostics.
+- **Light and dark** themes (or follow the system), installable-feeling phone layout with a bottom tab bar, keyboard- and screen-reader-friendly controls.
+
+### Basic vs advanced
+
+Everyday controls live on the five tabs and at the top of each page. Installer and power-user options sit in **purple, dashed "Advanced" sections** (collapsed by default — turn on *Settings → App preferences → Show advanced options* to expand them everywhere). Anything destructive is **red, always confirmed**, and kept in a `⋯` menu or *Settings → Danger zone*. The full map is in [docs/redesign/information-architecture.md](docs/redesign/information-architecture.md).
 
 ---
 
 ## Screenshots
 
-### Login
+| Zones | Programs | History | Settings |
+| --- | --- | --- | --- |
+| ![Zones](docs/screenshot-zones.png) | ![Programs](docs/screenshot-programs.png) | ![History](docs/screenshot-history.png) | ![Settings](docs/screenshot-settings.png) |
 
-![HydroDash login screen](docs/screenshot-login.png)
-
-### Home
-
-![HydroDash home dashboard with draggable cards](docs/screenshot-home.png)
-
-### Zones
-
-![HydroDash zones: manual runs per zone](docs/screenshot-zones.png)
-
-### Programs
-
-![HydroDash programs list](docs/screenshot-programs.png)
-
-### History (timeline)
-
-![HydroDash irrigation history timeline](docs/screenshot-history.png)
-
-### Program editor
-
-![Edit program modal](docs/screenshot-program-edit.png)
+| Program editor | Login |
+| --- | --- |
+| ![Program editor](docs/screenshot-program-edit.png) | ![Login](docs/screenshot-login.png) |
 
 ---
 
 ## Contributing
 
-### Dashboard widgets
+- **Home cards** — to add a card to Home, follow **[Contributing Home cards](docs/contributing-widgets.md)**.
+- **Design** — the design system (tokens, shared components, basic/advanced/destructive rules) and the page map are in **[docs/redesign/](docs/redesign/)**; [feature-inventory.md](docs/redesign/feature-inventory.md) lists every feature and where it lives.
+- **Roadmap** — **[Roadmap requirements](docs/roadmap-requirements.md)** collects planning notes for larger features (goals, gaps, API/UX notes, draft acceptance criteria).
 
-To add a draggable tile on **Home**, follow **[Contributing dashboard widgets](docs/contributing-widgets.md)** (fork/branch, file checklist, data hooks, and PR expectations).
-
-### Product roadmap (More page)
-
-The **More** screen lists features not implemented yet. **[Roadmap requirements](docs/roadmap-requirements.md)** breaks each item into goals, gaps, API/UX notes, and draft acceptance criteria for planning and contributions.
+Before opening a PR run `npm run lint` and `npx tsc --noEmit -p tsconfig.app.json`, and check your change on a phone-sized and a desktop window in light and dark mode.
 
 ---
 
@@ -72,6 +77,17 @@ The **More** screen lists features not implemented yet. **[Roadmap requirements]
    ```
 
    Default dev URL: `http://127.0.0.1:5173`
+
+3. **No controller handy?** The official firmware builds a simulated controller for Docker:
+
+   ```bash
+   git clone --depth 1 https://github.com/OpenSprinkler/OpenSprinkler-Firmware.git
+   cd OpenSprinkler-Firmware && git submodule update --init --depth 1
+   docker build --build-arg BUILD_VERSION=DEMO -t opensprinkler-demo .
+   docker run -d -p 18080:80 opensprinkler-demo
+   ```
+
+   Then set `OS_BASE_URL=http://127.0.0.1:18080` and `OS_PASSWORD=opendoor` (the firmware default) in `.env`.
 
 ---
 
@@ -121,7 +137,7 @@ The image runs `npm run start` inside the container. `Dockerfile` uses `npm inst
 docker compose up
 ```
 
-**`hydrodash`** and **`hydrodash-notify`** share the same image (`command: node dist/notifications-service.mjs` on notify). **MariaDB** is **`mariadb:11`**. The web UI is exposed as **`8080:4173`**. **`DATABASE_URL`** and **`DATABASE_SCHEMA_URL`** are composed in YAML from **`MARIADB_*`** (no separate `DATABASE_*` keys in `.env` for Compose).
+**`hydrodash`** and **`hydrodash-notify`** share the same image (`command: node dist/notifications-service.mjs` on notify). The notify worker polls the controller (default every 45 s), pushes to ntfy, alerts when the controller has been unreachable for `NOTIFICATIONS_OFFLINE_ALERT_MIN` minutes, and exposes `GET /health` (503 when its poll loop stalls) used by the Compose `healthcheck`. If you run the stack from Portainer or another copy of the compose file, add that `healthcheck:` block there too. See [docs/notifications.md](docs/notifications.md). **MariaDB** is **`mariadb:11`**. The web UI is exposed as **`8080:4173`**. **`DATABASE_URL`** and **`DATABASE_SCHEMA_URL`** are composed in YAML from **`MARIADB_*`** (no separate `DATABASE_*` keys in `.env` for Compose).
 
 There is **no reverse proxy** in Compose. Use your own TLS/edge proxy in front if you need HTTPS or a single public hostname; see **[Reverse proxy (optional)](docs/environment.md#reverse-proxy-optional)** in `docs/environment.md` and the sample [`docker/nginx.conf`](docker/nginx.conf).
 
