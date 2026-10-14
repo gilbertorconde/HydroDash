@@ -128,7 +128,6 @@ export async function importOpenSprinklerControllerBackup(
   for (const key of Object.keys(OPTION_KEY_INDEX) as (keyof typeof OPTION_KEY_INDEX)[]) {
     if (!Object.prototype.hasOwnProperty.call(backupOpts, key)) continue
     const optVal = backupOpts[key]
-    const idx = OPTION_KEY_INDEX[key]
     if (SKIP_OPTION_IF_ZERO.includes(key) && optVal === 0) continue
     if (key === 'dhcp') {
       if (Number(currentOpts.dhcp) === 1) {

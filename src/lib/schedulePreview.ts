@@ -150,3 +150,26 @@ export function formatClock(minutes: number): string {
   const mm = m % 60
   return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
 }
+
+/**
+ * Decorative per-program colours (icon badges on Programs, blocks on the schedule preview), so a
+ * program keeps the same colour across pages. Saturated enough to carry white icons in light and dark.
+ */
+const PROGRAM_TONES: readonly [string, string][] = [
+  ['#1677d2', '#5cc8ff'],
+  ['#f2734a', '#ffc15e'],
+  ['#12a47a', '#5fe0b5'],
+  ['#6c5ce7', '#a99cff'],
+  ['#e0457b', '#ff9dbb'],
+  ['#0e93a8', '#62dceb'],
+]
+
+export function programColor(pid: number): string {
+  const tone = PROGRAM_TONES[((pid % PROGRAM_TONES.length) + PROGRAM_TONES.length) % PROGRAM_TONES.length]
+  return tone[0]
+}
+
+export function programGradient(pid: number): string {
+  const tone = PROGRAM_TONES[((pid % PROGRAM_TONES.length) + PROGRAM_TONES.length) % PROGRAM_TONES.length]
+  return `linear-gradient(160deg, ${tone[0]}, ${tone[1]})`
+}

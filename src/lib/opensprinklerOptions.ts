@@ -185,3 +185,9 @@ export const ADJUSTMENT_METHODS: { id: number; name: string; minFw?: number }[] 
   { id: 3, name: 'ETo', minFw: 216 },
   { id: 4, name: 'Monthly', minFw: 220 },
 ]
+
+/**
+ * Bit 7 of `uwt` flags weather restrictions (e.g. California restriction); the adjustment
+ * method lives in the low 7 bits. Mask it off before matching `ADJUSTMENT_METHODS`.
+ */
+export const WEATHER_RESTRICTION_BIT = 0x80

@@ -43,7 +43,7 @@ function RootComponent() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <Outlet />
-          <TanStackRouterDevtools position="bottom-right" />
+          {import.meta.env.DEV ? <TanStackRouterDevtools position="bottom-right" /> : null}
         </ThemeProvider>
       </QueryClientProvider>
     </ClientOnly>

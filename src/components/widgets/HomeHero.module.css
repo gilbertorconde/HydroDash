@@ -1,0 +1,257 @@
+/* Home hero ("Now running"): sits inside PageHero, so colours come from --hero-* / --glass-*. */
+
+.body {
+  display: grid;
+  gap: var(--space-lg);
+  margin-top: var(--space-sm);
+}
+
+.main {
+  min-width: 0;
+}
+
+.loading {
+  display: grid;
+  place-items: center;
+  min-height: 8rem;
+}
+
+.label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hero-muted);
+}
+
+/* Huge live countdown (mock: 76px phone / 120px desktop). */
+.countdown {
+  font-size: clamp(4.2rem, 19vw, 7.5rem);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.bigClock {
+  margin-top: 0.15rem;
+  font-size: clamp(2.8rem, 12vw, 4.6rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.02;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+  color: var(--hero-muted);
+}
+
+.progress {
+  margin-top: var(--space-sm);
+  height: 8px;
+  max-width: 32rem;
+  border-radius: var(--radius-pill);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--hero-text);
+  transition: width 1s linear;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.buttons > * {
+  flex: 1 1 auto;
+}
+
+/* ---- Status dots inside glass pills ---- */
+
+.pills {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.dotLive,
+.dotOk,
+.dotPaused,
+.dotOff {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.dotLive {
+  background: var(--color-success);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 30%, transparent);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.dotOk {
+  background: var(--color-success);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-success) 30%, transparent);
+}
+
+.dotPaused {
+  background: var(--color-warning);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-warning) 30%, transparent);
+}
+
+.dotOff {
+  background: var(--color-danger);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-danger) 30%, transparent);
+}
+
+@keyframes pulse {
+  50% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-success) 10%, transparent);
+  }
+}
+
+/* ---- Parallel zones ---- */
+
+.multi {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.multiRow {
+  padding: 0.7rem 0.8rem 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+}
+
+.multiRow .progress {
+  margin-top: 0.5rem;
+  height: 5px;
+  max-width: none;
+}
+
+.multiTop {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.multiText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.multiText strong {
+  font-size: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.multiText span {
+  font-size: 0.8rem;
+  color: var(--hero-muted);
+}
+
+.multiTime {
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.multiStop {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: var(--hero-text);
+  color: var(--hero-from);
+  cursor: pointer;
+}
+
+.multiStop:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- Banners (disabled controller, rain delay) ---- */
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding: 0.7rem 0.75rem 0.7rem 0.8rem;
+  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+}
+
+.notice + .notice {
+  margin-top: var(--space-xs);
+}
+
+.noticeIcon {
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  flex: none;
+  border-radius: var(--radius-sm);
+  background: var(--glass-hover);
+}
+
+.noticeText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+
+.noticeText span {
+  color: var(--hero-muted);
+}
+
+@media (min-width: 900px) {
+  .body {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: var(--space-xl);
+  }
+
+  .buttons > * {
+    flex: 0 0 auto;
+  }
+
+  .multi {
+    grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  }
+
+  .notice {
+    max-width: 40rem;
+  }
+}

@@ -1,40 +1,138 @@
-.wrap {
+/* Full-screen hero gradient (same tokens as PageHero) with the wave overlay and a centred card. */
+.screen {
+  position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(1.5rem + env(safe-area-inset-top)) 1.25rem calc(1.5rem + env(safe-area-inset-bottom));
+  color: var(--hero-text);
+  background: linear-gradient(165deg, var(--hero-from) 0%, var(--hero-via) 55%, var(--hero-to) 100%);
+  overflow: hidden;
+}
+
+.waves {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 55%;
+  pointer-events: none;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 200' preserveAspectRatio='none'%3E%3Cpath d='M0 70 C 200 20, 400 120, 600 70 S 1000 20, 1200 70 V200 H0Z' fill='white' fill-opacity='0.08'/%3E%3Cpath d='M0 115 C 250 65, 450 165, 700 110 S 1050 75, 1200 120 V200 H0Z' fill='white' fill-opacity='0.09'/%3E%3Cpath d='M0 160 C 300 120, 500 200, 800 150 S 1100 130, 1200 160 V200 H0Z' fill='white' fill-opacity='0.08'/%3E%3C/svg%3E")
+      bottom / 100% 100% no-repeat;
+}
+
+.content {
+  position: relative;
+  width: min(25rem, 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
-  padding: 1.5rem;
-  background: var(--color-bg);
+  gap: var(--space-lg);
 }
 
-.brandBlock {
+.brand {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
-.brandLogo {
+.logoWrap {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
   height: 4.5rem;
-  width: auto;
-  max-width: min(18rem, 85vw);
+  border-radius: 24px;
+  background: var(--color-surface);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.22);
+}
+
+.logo {
+  width: 3rem;
+  height: auto;
   object-fit: contain;
 }
 
-.hint {
-  font-size: 0.88rem;
-  color: var(--color-muted);
-  margin: 0 0 0.75rem;
+.brandName {
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
-.hint code {
-  font-size: 0.82rem;
-  word-break: break-all;
+.card {
+  width: 100%;
+  padding: 1.6rem 1.5rem 1.5rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-lg);
+}
+
+.title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.hint {
+  margin: 0.3rem 0 var(--space-lg);
+  font-size: 0.9rem;
+  color: var(--color-muted);
 }
 
 .form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  max-width: 22rem;
+  gap: var(--space-lg);
+}
+
+.pwWrap {
+  position: relative;
+}
+
+.pwInput {
+  max-width: none;
+  min-height: 3rem;
+  padding-right: 3rem;
+}
+
+.pwToggle {
+  position: absolute;
+  top: 50%;
+  right: 0.3rem;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.pwToggle:hover {
+  color: var(--color-text);
+  background: var(--color-elevated);
+}
+
+.fieldHint {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--color-muted);
+}
+
+.submit {
+  width: 100%;
+}
+
+.footer {
+  font-size: 0.82rem;
+  color: var(--hero-muted);
 }

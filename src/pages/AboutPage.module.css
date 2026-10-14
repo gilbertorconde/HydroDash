@@ -1,27 +1,64 @@
-.titleRow {
+.brand {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
 }
 
-.titleLogo {
-  height: 2.25rem;
-  width: auto;
+.logoWrap {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
   flex-shrink: 0;
+  border-radius: 20px;
+  background: linear-gradient(160deg, var(--hero-from), var(--hero-via) 60%, var(--hero-to));
+  box-shadow: var(--shadow-sm);
+}
+
+.logo {
+  width: 2.6rem;
+  height: auto;
   object-fit: contain;
 }
 
+.brandName {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.brandTag {
+  font-size: var(--text-small);
+  color: var(--color-muted);
+}
+
 .p {
-  margin: 0 0 var(--space-md);
-  line-height: 1.55;
+  line-height: 1.6;
   font-size: var(--text-body);
 }
 
-.p:last-child {
-  margin-bottom: 0;
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-md);
 }
 
-.p a {
-  color: var(--color-accent);
-  font-weight: 650;
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: var(--space-sm);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
 }

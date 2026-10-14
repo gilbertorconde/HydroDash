@@ -1,16 +1,17 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
+  useId,
   useMemo,
   useRef,
   useState,
   useSyncExternalStore,
   type Dispatch,
+  type ReactNode,
   type SetStateAction,
 } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
+import { useNavigate } from '@tanstack/react-router'
 import { createPortal, flushSync } from 'react-dom'
 import {
   DndContext,
@@ -23,13 +24,12 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core'
-import { restrictToVerticalAxis } from '@dnd-kit/modifiers'
 import {
   SortableContext,
   arrayMove,
+  rectSortingStrategy,
   sortableKeyboardCoordinates,
   useSortable,
-  verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { ProgramRow } from '../api/types'
@@ -93,18 +93,47 @@ import {
 } from '../lib/opensprinklerRuntime'
 import { isStationDisabled } from '../lib/stationDis'
 import { useAppPreferences } from '../lib/appPreferences'
-import { Card, Button, ErrorBox, Spinner, Label, Input, OverflowMenu } from '../components/ui'
+import { formatMinutesWall } from '../lib/formatLocale'
+import { programGradient } from '../lib/schedulePreview'
+import { findNextScheduledRun } from '../components/widgets/dashboardShared'
+import {
+  AdvancedSection,
+  Button,
+  EmptyState,
+  ErrorBox,
+  Input,
+  Label,
+  OverflowMenu,
+  PageBody,
+  PageHero,
+  Pill,
+  Segmented,
+  Spinner,
+  Switch,
+} from '../components/ui'
 import { DurationInput } from '../components/DurationInput'
 import {
+  CalendarClock,
   CalendarDays,
+  CheckCircle2,
   Clock3,
   CloudSun,
   Droplets,
+  Flower2,
+  Leaf,
   ListChecks,
   MapPin,
+  Pencil,
+  Play,
+  Plus,
   Repeat,
-  SlidersHorizontal,
+  Sprout,
+  Square,
+  Sun,
   Timer,
+  Trash2,
+  TreeDeciduous,
+  X,
 } from 'lucide-react'
 import styles from './ProgramsPage.module.css'
 
@@ -112,6 +141,10 @@ const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const FULL_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 const DEFAULT_OS_FROM = (1 << 5) + 1 // Jan 1
 const DEFAULT_OS_TO = (12 << 5) + 31 // Dec 31
+/** Icons cycled over program cards (decorative, by program number). */
+const PROGRAM_ICONS = [Leaf, Sun, Sprout, Flower2, TreeDeciduous, Droplets]
+
+const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
 
 function formatDuration(totalSeconds: number): string {
   if (totalSeconds <= 0) return '0s'
@@ -143,6 +176,14 @@ function pickToToken(p: StartPickState): number {
   return encodeSunsetOffset(p.sunOffsetMin)
 }
 
+function describePick(p: StartPickState, is24Hour: boolean): string {
+  if (p.mode === 'clock') return formatMinutesWall(p.clockMinutes, is24Hour)
+  const ref = p.mode === 'sunrise' ? 'Sunrise' : 'Sunset'
+  if (p.sunOffsetMin === 0) return `At ${ref.toLowerCase()}`
+  const abs = Math.abs(p.sunOffsetMin)
+  return `${abs} min ${p.sunOffsetMin > 0 ? 'after' : 'before'} ${ref.toLowerCase()}`
+}
+
 function formatClockInput(mins: number, is24Hour: boolean): string {
   const safe = ((Math.max(0, mins) % 1440) + 1440) % 1440
   const h = Math.floor(safe / 60)
@@ -171,12 +212,17 @@ function parseClockInput(text: string, is24Hour: boolean): number | null {
   return hh * 60 + mm
 }
 
+function summarizeWeekdays(days0: number): string {
+  const active = DAY_NAMES.filter((_, idx) => ((days0 >> idx) & 1) === 1)
+  if (active.length === 7) return 'Every day'
+  if (active.length === 5 && ((days0 >> 5) & 3) === 0) return 'Weekdays'
+  if (active.length === 2 && ((days0 >> 5) & 3) === 3) return 'Weekends'
+  return active.length > 0 ? active.join(' · ') : 'No weekdays selected'
+}
+
 function summarizeDays(flag: number, days0: number, days1: number): string {
   const t = getProgramDayType(flag)
-  if (t === 'weekly') {
-    const active = DAY_NAMES.filter((_, idx) => ((days0 >> idx) & 1) === 1)
-    return active.length > 0 ? active.join(', ') : 'No weekdays selected'
-  }
+  if (t === 'weekly') return summarizeWeekdays(days0)
   if (t === 'interval') {
     return `Every ${days1} day(s), starting offset ${days0}`
   }
@@ -201,15 +247,25 @@ function repeatInfo(
   return count > 0 && intervalMin > 0 ? { count, intervalMin } : null
 }
 
-function summarizeStarts(starts: [number, number, number, number], fixed: boolean): string {
+/** Start token label honouring the 12/24h preference (sun-relative tokens keep the codec label). */
+function startLabel(token: number, is24Hour: boolean): string {
+  const d = decodeStartToken(token)
+  return d.kind === 'clock' ? formatMinutesWall(d.minutes, is24Hour) : formatStartTokenLabel(token)
+}
+
+function summarizeStarts(
+  starts: [number, number, number, number],
+  fixed: boolean,
+  is24Hour: boolean,
+): string {
   if (fixed) {
     const parts = starts
-      .map((v) => (isStartDisabled(v) ? null : formatStartTokenLabel(v)))
+      .map((v) => (isStartDisabled(v) ? null : startLabel(v, is24Hour)))
       .filter(Boolean) as string[]
     return parts.length > 0 ? parts.join(' · ') : 'No start times'
   }
   if (isStartDisabled(starts[0])) return 'No start time'
-  const first = formatStartTokenLabel(starts[0])
+  const first = startLabel(starts[0], is24Hour)
   const rep = repeatInfo(starts, fixed)
   return rep ? `${first}, then ${rep.count}× every ${rep.intervalMin} min` : first
 }
@@ -362,158 +418,283 @@ function createEditorState(program: ProgramRow | null, pid: number, nSta: number
   }
 }
 
+/** One-line summary of everything that lives in the editor's Advanced section. */
+function advancedSummary(e: ProgramEditorState): string {
+  const parts: string[] = []
+  if (e.dayType === 'weekly') parts.push('Weekly')
+  else if (e.dayType === 'interval') parts.push(`Every ${e.intervalEvery} days`)
+  else if (e.dayType === 'monthly') parts.push('Monthly')
+  else parts.push('Single run')
+  if (e.restriction !== 'none') parts.push(e.restriction === 'odd' ? 'odd days' : 'even days')
+  if (e.primaryPick.mode !== 'clock') parts.push(`${e.primaryPick.mode} start`)
+  if (e.startMode === 'fixed') {
+    const n = 1 + e.fixedSlotOn.filter(Boolean).length
+    parts.push(`${n} fixed starts`)
+  } else if (e.repeatCount > 0) {
+    parts.push(`repeats ×${e.repeatCount}`)
+  }
+  if (e.keepDateRange) parts.push('date range')
+  return parts.join(' · ')
+}
+
+/* ---------- Local building blocks ---------- */
+
+/** Text time input in the user's 12/24h format; keeps a draft while typing, commits valid values. */
+function ClockInput({
+  id,
+  minutes,
+  is24Hour,
+  onChange,
+  className,
+}: {
+  id: string
+  minutes: number
+  is24Hour: boolean
+  onChange: (minutes: number) => void
+  className?: string
+}) {
+  const [draft, setDraft] = useState<string | null>(null)
+  const formatted = formatClockInput(minutes, is24Hour)
+  const invalid = draft !== null && parseClockInput(draft, is24Hour) === null
+  return (
+    <Input
+      id={id}
+      className={cx(styles.clockInput, invalid && styles.inputInvalid, className)}
+      type="text"
+      inputMode={is24Hour ? 'numeric' : 'text'}
+      autoComplete="off"
+      placeholder={is24Hour ? '23:59' : '11:59 PM'}
+      value={draft ?? formatted}
+      aria-invalid={invalid || undefined}
+      onChange={(e) => {
+        setDraft(e.target.value)
+        const m = parseClockInput(e.target.value, is24Hour)
+        if (m !== null) onChange(m)
+      }}
+      onBlur={() => setDraft(null)}
+    />
+  )
+}
+
+/** Clock / Sunrise / Sunset reference with the matching time or offset input. */
 function StartPickEditor({
   idPrefix,
-  label,
   value,
   onChange,
   is24Hour,
-  compact = false,
+  showClockInput = true,
 }: {
   idPrefix: string
-  label: string
   value: StartPickState
   onChange: (next: StartPickState) => void
   is24Hour: boolean
-  compact?: boolean
+  /** The first start's clock time is edited in the basic section, so Advanced hides it. */
+  showClockInput?: boolean
 }) {
-  const clockText = formatClockInput(value.clockMinutes, is24Hour)
-
-  const segBtn = compact ? styles.segmentBtnSm : undefined
-  if (compact) {
-    return (
-      <div className={styles.startPickBlockCompact}>
-        {label ? <Label htmlFor={`${idPrefix}-clock`}>{label}</Label> : null}
-        <div className={styles.startPickCompactInner}>
-          <div className={styles.segmentRowCompact}>
-            <Button
-              type="button"
-              className={segBtn}
-              variant={value.mode === 'clock' ? 'primary' : 'secondary'}
-              onClick={() => onChange({ ...value, mode: 'clock' })}
-            >
-              Clock
-            </Button>
-            <Button
-              type="button"
-              className={segBtn}
-              variant={value.mode === 'sunrise' ? 'primary' : 'secondary'}
-              onClick={() => onChange({ ...value, mode: 'sunrise', sunOffsetMin: value.sunOffsetMin })}
-            >
-              Sunrise
-            </Button>
-            <Button
-              type="button"
-              className={segBtn}
-              variant={value.mode === 'sunset' ? 'primary' : 'secondary'}
-              onClick={() => onChange({ ...value, mode: 'sunset', sunOffsetMin: value.sunOffsetMin })}
-            >
-              Sunset
-            </Button>
-          </div>
-          {value.mode === 'clock' ? (
-            <Input
-              id={`${idPrefix}-clock`}
-              className={styles.timeInputCompact}
-              type="text"
-              inputMode="numeric"
-              placeholder={is24Hour ? '23:59' : '11:59 PM'}
-              value={clockText}
-              onChange={(e) => {
-                const m = parseClockInput(e.target.value, is24Hour)
-                if (m !== null) onChange({ ...value, mode: 'clock', clockMinutes: m })
-              }}
-            />
-          ) : (
-            <div className={styles.sunOffsetInline}>
-              <label htmlFor={`${idPrefix}-off`} className={styles.srOnly}>
-                Offset minutes from {value.mode}
-              </label>
-              <Input
-                id={`${idPrefix}-off`}
-                className={styles.sunOffsetInputCompact}
-                type="number"
-                min={-720}
-                max={720}
-                value={value.sunOffsetMin}
-                title={`Minutes after ${value.mode} (negative = before)`}
-                onChange={(e) =>
-                  onChange({ ...value, sunOffsetMin: parseInt(e.target.value, 10) || 0 })
-                }
-              />
-              <span className={styles.sunOffsetSuffix} aria-hidden>
-                min
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className={styles.startPickBlock}>
-      {label ? <Label htmlFor={`${idPrefix}-clock`}>{label}</Label> : null}
-      <div className={styles.segmentRow}>
-        <Button
-          type="button"
-          variant={value.mode === 'clock' ? 'primary' : 'secondary'}
-          onClick={() => onChange({ ...value, mode: 'clock' })}
-        >
-          Clock
-        </Button>
-        <Button
-          type="button"
-          variant={value.mode === 'sunrise' ? 'primary' : 'secondary'}
-          onClick={() => onChange({ ...value, mode: 'sunrise', sunOffsetMin: value.sunOffsetMin })}
-        >
-          Sunrise
-        </Button>
-        <Button
-          type="button"
-          variant={value.mode === 'sunset' ? 'primary' : 'secondary'}
-          onClick={() => onChange({ ...value, mode: 'sunset', sunOffsetMin: value.sunOffsetMin })}
-        >
-          Sunset
-        </Button>
-      </div>
+    <div className={styles.startPick}>
+      <Segmented
+        label="Start reference"
+        value={value.mode}
+        onChange={(mode) => onChange({ ...value, mode })}
+        options={[
+          { value: 'clock', label: 'Clock' },
+          { value: 'sunrise', label: 'Sunrise' },
+          { value: 'sunset', label: 'Sunset' },
+        ]}
+      />
       {value.mode === 'clock' ? (
-        <Input
-          id={`${idPrefix}-clock`}
-          className={styles.timeInput}
-          type="text"
-          inputMode="numeric"
-          placeholder={is24Hour ? '23:59' : '11:59 PM'}
-          value={clockText}
-          onChange={(e) => {
-            const m = parseClockInput(e.target.value, is24Hour)
-            if (m !== null) onChange({ ...value, mode: 'clock', clockMinutes: m })
-          }}
-        />
+        showClockInput ? (
+          <ClockInput
+            id={`${idPrefix}-clock`}
+            minutes={value.clockMinutes}
+            is24Hour={is24Hour}
+            onChange={(clockMinutes) => onChange({ ...value, mode: 'clock', clockMinutes })}
+          />
+        ) : null
       ) : (
-        <div className={styles.sunOffsetRow}>
-          <Label htmlFor={`${idPrefix}-off`}>Offset from {value.mode} (minutes)</Label>
+        <div className={styles.offsetRow}>
+          <label htmlFor={`${idPrefix}-off`} className={styles.srOnly}>
+            Offset minutes from {value.mode}
+          </label>
           <Input
             id={`${idPrefix}-off`}
-            className={styles.numberInput}
+            className={styles.offsetInput}
             type="number"
             min={-720}
             max={720}
             value={value.sunOffsetMin}
-            onChange={(e) =>
-              onChange({ ...value, sunOffsetMin: parseInt(e.target.value, 10) || 0 })
-            }
+            title={`Minutes after ${value.mode} (negative = before)`}
+            onChange={(e) => onChange({ ...value, sunOffsetMin: parseInt(e.target.value, 10) || 0 })}
           />
-          <p className={styles.helpMiniTight}>
-            0 = exactly at {value.mode}. Positive runs after, negative before.
-          </p>
+          <span className={styles.offsetSuffix}>min from {value.mode}</span>
         </div>
       )}
     </div>
   )
 }
 
-function SortableProgramRow({
+const QUEUE_OPTIONS = [
+  { qo: 2, title: 'Run now, cancel others', desc: 'Replace: stops anything running or queued.' },
+  { qo: 1, title: 'Run now, pause others', desc: 'Insert: others resume afterwards.' },
+  { qo: 0, title: 'Run after others', desc: 'Append: waits for the current queue to finish.' },
+] as const
+
+function queueLabel(qo: number): string {
+  return QUEUE_OPTIONS.find((o) => o.qo === qo)?.title ?? 'Run now, cancel others'
+}
+
+/** Queue behaviour (`qo`) as radio cards, kept in an Advanced section. */
+function QueuePicker({
+  name,
+  value,
+  onChange,
+  disabled,
+}: {
+  name: string
+  value: number
+  onChange: (qo: number) => void
+  disabled?: boolean
+}) {
+  return (
+    <AdvancedSection
+      id={`programs-${name}-queue`}
+      title="Queue behaviour"
+      description={`Currently: ${queueLabel(value).toLowerCase()}`}
+    >
+      <fieldset className={styles.radioCards} disabled={disabled}>
+        <legend className={styles.srOnly}>Queue</legend>
+        {QUEUE_OPTIONS.map((o) => (
+          <label key={o.qo} className={cx(styles.radioCard, value === o.qo && styles.radioCardOn)}>
+            <input
+              type="radio"
+              name={name}
+              className={styles.radioInput}
+              checked={value === o.qo}
+              onChange={() => onChange(o.qo)}
+            />
+            <span className={styles.radioDot} aria-hidden />
+            <span className={styles.radioText}>
+              <span className={styles.radioTitle}>{o.title}</span>
+              <span className={styles.radioDesc}>{o.desc}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+    </AdvancedSection>
+  )
+}
+
+/**
+ * Modal sheet: full-screen on phones (`full`) or a bottom sheet (`auto`), centered dialog on
+ * desktop. Esc / backdrop click / × close it; header and footer stay put while the body scrolls.
+ */
+function Sheet({
+  title,
+  subtitle,
+  icon,
+  iconBackground,
+  size = 'auto',
+  onClose,
+  footer,
+  children,
+}: {
+  title: ReactNode
+  subtitle?: ReactNode
+  icon?: ReactNode
+  iconBackground?: string
+  size?: 'auto' | 'full'
+  onClose: () => void
+  footer?: ReactNode
+  children: ReactNode
+}) {
+  const titleId = useId()
+  const panelRef = useRef<HTMLDivElement>(null)
+  const onCloseRef = useRef(onClose)
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
+
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const prevFocus = document.activeElement as HTMLElement | null
+    panelRef.current?.focus({ preventScroll: true })
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onCloseRef.current()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.body.style.overflow = prevOverflow
+      document.removeEventListener('keydown', onKeyDown)
+      prevFocus?.focus?.({ preventScroll: true })
+    }
+  }, [])
+
+  return createPortal(
+    <div className={styles.sheetOverlay} onClick={onClose} role="presentation">
+      <div
+        ref={panelRef}
+        tabIndex={-1}
+        className={cx(styles.sheet, size === 'full' && styles.sheetFull)}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
+        <header className={styles.sheetHeader}>
+          {icon ? (
+            <span className={styles.sheetIcon} style={iconBackground ? { background: iconBackground } : undefined}>
+              {icon}
+            </span>
+          ) : null}
+          <div className={styles.sheetHeading}>
+            <h2 id={titleId} className={styles.sheetTitle}>
+              {title}
+            </h2>
+            {subtitle ? <p className={styles.sheetSubtitle}>{subtitle}</p> : null}
+          </div>
+          <button type="button" className={styles.sheetClose} aria-label="Close" onClick={onClose}>
+            <X size={20} aria-hidden />
+          </button>
+        </header>
+        <div className={styles.sheetBody}>{children}</div>
+        {footer ? <footer className={styles.sheetFooter}>{footer}</footer> : null}
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
+/** Titled group inside a sheet. */
+function SheetSection({
+  title,
+  icon,
+  aside,
+  children,
+}: {
+  title: ReactNode
+  icon?: ReactNode
+  aside?: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <section className={styles.sheetSection}>
+      <div className={styles.sheetSectionHead}>
+        <h3 className={styles.sheetSectionTitle}>
+          {icon}
+          {title}
+        </h3>
+        {aside ? <div className={styles.sheetSectionAside}>{aside}</div> : null}
+      </div>
+      {children}
+    </section>
+  )
+}
+
+/* ---------- Program card ---------- */
+
+function SortableProgramCard({
   id,
   sortDisabled,
   prog,
@@ -533,6 +714,7 @@ function SortableProgramRow({
   stopProgramStationsPending,
   stationOrder,
   showStationNum,
+  is24Hour,
 }: {
   id: string
   sortDisabled: boolean
@@ -545,7 +727,7 @@ function SortableProgramRow({
   toggleEn: ReturnType<typeof useProgramToggle>
   toggleUwt: ReturnType<typeof useProgramUwt>
   del: ReturnType<typeof useDeleteProgram>
-  runAction: (task: () => Promise<unknown>, successMessage: string) => Promise<void>
+  runAction: (task: () => Promise<unknown>, successMessage: string) => Promise<boolean>
   onRunNow: (pid: number) => void
   onProgramStop: (pid: number) => void
   programRunning: boolean
@@ -553,6 +735,7 @@ function SortableProgramRow({
   stopProgramStationsPending: boolean
   stationOrder: number[]
   showStationNum: boolean
+  is24Hour: boolean
 }) {
   const {
     attributes,
@@ -582,6 +765,7 @@ function SortableProgramRow({
 
   const displayName = name || `Program ${pid + 1}`
   const repeating = !fixed && repeatInfo(starts, fixed) !== null
+  const Icon = PROGRAM_ICONS[pid % PROGRAM_ICONS.length] ?? Leaf
 
   const menuItems = [
     {
@@ -618,7 +802,7 @@ function SortableProgramRow({
       danger: true,
       disabled: del.isPending,
       onSelect: () => {
-        if (window.confirm('Delete this program?')) {
+        if (window.confirm(`Delete "${displayName}"? This cannot be undone.`)) {
           void runAction(() => del.mutateAsync(pid), 'Program deleted.')
         }
       },
@@ -626,175 +810,176 @@ function SortableProgramRow({
   ]
 
   return (
-    <div
+    <article
       ref={setNodeRef}
       style={style}
-      className={`${styles.sortableRow} ${isDragging ? styles.sortableRowDragging : ''}`}
+      className={cx(
+        styles.programCard,
+        !en && styles.programCardOff,
+        programRunning && styles.programCardRunning,
+        isDragging && styles.programCardDragging,
+      )}
+      aria-label={displayName}
     >
-      <Card
-        title={displayName}
-        className={styles.programCard}
-        titleAction={
-          <div className={styles.programCardHeaderActions}>
+      <header className={styles.programHead}>
+        <span
+          className={styles.programIcon}
+          style={en ? { background: programGradient(pid) } : undefined}
+          aria-hidden
+        >
+          <Icon size={22} strokeWidth={2.1} />
+        </span>
+        <div className={styles.programHeading}>
+          <h2 className={styles.programName}>{displayName}</h2>
+          <div className={styles.programPills}>
+            {programRunning ? (
+              <Pill tone="success" icon={<span className={styles.liveDot} aria-hidden />}>
+                Running
+              </Pill>
+            ) : null}
             <span
-              className={en ? styles.programStatusOn : styles.programStatusOff}
               title={
                 en
                   ? 'Program is enabled and can run on its schedule.'
                   : 'Program is disabled and will not run.'
               }
             >
-              {en ? 'Enabled' : 'Disabled'}
+              <Pill tone={en ? 'accent' : 'neutral'}>{en ? 'Enabled' : 'Disabled'}</Pill>
             </span>
-            <OverflowMenu items={menuItems} label={`More actions for ${displayName}`} />
-            <button
-              type="button"
-              ref={setActivatorNodeRef}
-              className={styles.dragHandle}
-              aria-label={`Drag to reorder ${displayName}`}
-              {...attributes}
-              {...listeners}
-            >
-              <svg
-                className={styles.dragHandleSvg}
-                width="14"
-                height="18"
-                viewBox="0 0 14 18"
-                aria-hidden
-              >
-                <circle cx="4" cy="4" r="1.75" fill="currentColor" />
-                <circle cx="10" cy="4" r="1.75" fill="currentColor" />
-                <circle cx="4" cy="9" r="1.75" fill="currentColor" />
-                <circle cx="10" cy="9" r="1.75" fill="currentColor" />
-                <circle cx="4" cy="14" r="1.75" fill="currentColor" />
-                <circle cx="10" cy="14" r="1.75" fill="currentColor" />
-              </svg>
-            </button>
-          </div>
-        }
-      >
-        {/* Only the summary is muted for disabled programs; actions below stay full strength. */}
-        <div className={en ? styles.programCardInfo : `${styles.programCardInfo} ${styles.programCardMuted}`}>
-          <ul className={styles.programSummaryList} aria-label="How this program is configured to run">
-            {uwt ? (
-              <li>
-                <span className={styles.summaryChip}>
-                  <CloudSun className={styles.summaryChipIcon} size={13} aria-hidden />
-                  Weather adjust on
-                </span>
-              </li>
-            ) : null}
-            <li>
-              <span className={styles.summaryChip}>
-                <CalendarDays className={styles.summaryChipIcon} size={13} aria-hidden />
-                {dayTypeShort(flag)}
-              </span>
-            </li>
-            <li>
-              <span className={styles.summaryChip}>
-                {repeating ? (
-                  <Repeat className={styles.summaryChipIcon} size={13} aria-hidden />
-                ) : (
-                  <ListChecks className={styles.summaryChipIcon} size={13} aria-hidden />
-                )}
-                {startModeShort(starts, fixed)}
-              </span>
-            </li>
-            {rest ? (
-              <li>
-                <span className={styles.summaryChip}>{rest}</span>
-              </li>
-            ) : null}
-            {dr ? (
-              <li>
-                <span className={styles.summaryChip}>
-                  <MapPin className={styles.summaryChipIcon} size={13} aria-hidden />
-                  Date range only
-                </span>
-              </li>
-            ) : null}
-          </ul>
-          <div className={styles.programCardLayout}>
-            <div className={styles.programCardSchedule}>
-              <div className={styles.programMetaGrid}>
-                <div className={styles.programMetaCell}>
-                  <CalendarDays className={styles.programMetaIcon} size={15} aria-hidden />
-                  <div className={styles.programMetaBody}>
-                    <span className={styles.programMetaLabel}>Days</span>
-                    <span className={styles.programMetaValue}>{summarizeDays(flag, days0, days1)}</span>
-                  </div>
-                </div>
-                <div className={styles.programMetaCell}>
-                  <Clock3 className={styles.programMetaIcon} size={15} aria-hidden />
-                  <div className={styles.programMetaBody}>
-                    <span className={styles.programMetaLabel}>Starts</span>
-                    <span className={styles.programMetaValue}>{summarizeStarts(starts, fixed)}</span>
-                  </div>
-                </div>
-                <div className={styles.programMetaCell}>
-                  <Timer className={styles.programMetaIcon} size={15} aria-hidden />
-                  <div className={styles.programMetaBody}>
-                    <span className={styles.programMetaLabel}>Total</span>
-                    <span className={styles.programMetaValue}>{formatDuration(totalDurationSeconds)}</span>
-                  </div>
-                </div>
-                {dr ? (
-                  <div className={`${styles.programMetaCell} ${styles.programMetaCellWide}`}>
-                    <MapPin className={styles.programMetaIcon} size={15} aria-hidden />
-                    <div className={styles.programMetaBody}>
-                      <span className={styles.programMetaLabel}>Date range</span>
-                      <span className={styles.programMetaValue}>
-                        {formatOsDateMmDd(range[1])} → {formatOsDateMmDd(range[2])}
-                      </span>
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-            <div className={styles.programCardZones}>
-              <p className={styles.cardSectionTitle}>Zones</p>
-              <div className={styles.zoneDurations}>
-                {activeZones.length === 0 ? (
-                  <p className={styles.meta}>No active zones in this program.</p>
-                ) : (
-                  activeZones.map(({ idx, seconds }) => (
-                    <span
-                      key={idx}
-                      className={`${styles.durationPill} ${isStationDisabled(stnDis, idx) ? styles.pillMuted : ''}`}
-                    >
-                      {stationDisplayName(idx, stationNames, showStationNum)}: {formatDuration(seconds)}
-                    </span>
-                  ))
-                )}
-              </div>
-            </div>
+            <span className={styles.programNumber}>#{pid + 1}</span>
           </div>
         </div>
-        <div className={styles.programCardActions}>
-          {programRunning ? (
-            <Button
-              variant="danger"
-              disabled={stopProgramStationsPending}
-              onClick={() => onProgramStop(pid)}
-            >
-              Stop
-            </Button>
+        <div className={styles.programHeadActions}>
+          <OverflowMenu items={menuItems} label={`More actions for ${displayName}`} />
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            className={styles.dragHandle}
+            aria-label={`Drag to reorder ${displayName}`}
+            {...attributes}
+            {...listeners}
+          >
+            <svg width="14" height="18" viewBox="0 0 14 18" aria-hidden>
+              <circle cx="4" cy="4" r="1.75" fill="currentColor" />
+              <circle cx="10" cy="4" r="1.75" fill="currentColor" />
+              <circle cx="4" cy="9" r="1.75" fill="currentColor" />
+              <circle cx="10" cy="9" r="1.75" fill="currentColor" />
+              <circle cx="4" cy="14" r="1.75" fill="currentColor" />
+              <circle cx="10" cy="14" r="1.75" fill="currentColor" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      {/* Only the details are muted for disabled programs; actions below stay full strength. */}
+      <div className={cx(styles.programDetails, !en && styles.muted)}>
+        <dl className={styles.metaTiles}>
+          <div className={styles.metaTile}>
+            <dt>
+              <CalendarDays size={13} aria-hidden />
+              Days
+            </dt>
+            <dd>{summarizeDays(flag, days0, days1)}</dd>
+          </div>
+          <div className={styles.metaTile}>
+            <dt>
+              <Clock3 size={13} aria-hidden />
+              Starts
+            </dt>
+            <dd>{summarizeStarts(starts, fixed, is24Hour)}</dd>
+          </div>
+          <div className={styles.metaTile}>
+            <dt>
+              <Timer size={13} aria-hidden />
+              Total
+            </dt>
+            <dd>{formatDuration(totalDurationSeconds)}</dd>
+          </div>
+        </dl>
+
+        <ul className={styles.tagList} aria-label="How this program is configured to run">
+          {uwt ? (
+            <li className={styles.tag}>
+              <CloudSun size={13} aria-hidden />
+              Weather adjust on
+            </li>
+          ) : null}
+          <li className={styles.tag}>
+            <CalendarDays size={13} aria-hidden />
+            {dayTypeShort(flag)}
+          </li>
+          <li className={styles.tag}>
+            {repeating ? <Repeat size={13} aria-hidden /> : <ListChecks size={13} aria-hidden />}
+            {startModeShort(starts, fixed)}
+          </li>
+          {rest ? <li className={styles.tag}>{rest}</li> : null}
+          {dr ? (
+            <li className={styles.tag} title="Only runs within this date range">
+              <MapPin size={13} aria-hidden />
+              {formatOsDateMmDd(range[1])} → {formatOsDateMmDd(range[2])}
+            </li>
+          ) : null}
+        </ul>
+
+        <div className={styles.zoneBlock}>
+          <p className={styles.zoneLabel}>Zones</p>
+          {activeZones.length === 0 ? (
+            <p className={styles.mutedText}>No active zones in this program.</p>
           ) : (
-            <Button variant="primary" disabled={runNowBlocked} onClick={() => onRunNow(pid)}>
-              Run now
-            </Button>
+            <ul className={styles.zoneChips}>
+              {activeZones.map(({ idx, seconds }) => (
+                <li
+                  key={idx}
+                  className={cx(styles.zoneChip, isStationDisabled(stnDis, idx) && styles.zoneChipMuted)}
+                >
+                  <span className={styles.zoneChipName}>
+                    {stationDisplayName(idx, stationNames, showStationNum)}
+                  </span>
+                  <span className={styles.zoneChipDur}>{formatDuration(seconds)}</span>
+                </li>
+              ))}
+            </ul>
           )}
-          <Button variant="secondary" onClick={() => setEditor(createEditorState(prog, pid, nSta))}>
-            Edit
-          </Button>
         </div>
-      </Card>
-    </div>
+      </div>
+
+      <div className={styles.programActions}>
+        {programRunning ? (
+          <Button
+            variant="danger"
+            startIcon={<Square size={15} aria-hidden />}
+            disabled={stopProgramStationsPending}
+            onClick={() => onProgramStop(pid)}
+          >
+            Stop
+          </Button>
+        ) : (
+          <Button
+            variant="primary"
+            startIcon={<Play size={15} aria-hidden />}
+            disabled={runNowBlocked}
+            onClick={() => onRunNow(pid)}
+          >
+            Run now
+          </Button>
+        )}
+        <Button
+          variant="secondary"
+          startIcon={<Pencil size={15} aria-hidden />}
+          onClick={() => setEditor(createEditorState(prog, pid, nSta))}
+        >
+          Edit
+        </Button>
+      </div>
+    </article>
   )
 }
 
+/* ---------- Page ---------- */
+
 export function ProgramsPage() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const pr = useProgramsQuery()
   const jn = useStationsMeta()
   const toggleEn = useProgramToggle()
@@ -846,10 +1031,8 @@ export function ProgramsPage() {
   const [runProgQo, setRunProgQo] = useState(2)
   const [runProgUwt, setRunProgUwt] = useState<0 | 1>(1)
   const [editor, setEditor] = useState<ProgramEditorState | null>(null)
-  const restrictDetailsRef = useRef<HTMLDetailsElement>(null)
-  const addlDetailsRef = useRef<HTMLDetailsElement>(null)
   /** Avoid `createPortal` during SSR; no setState-in-effect (see react-hooks/set-state-in-effect). */
-  const editorPortalReady = useSyncExternalStore(
+  const portalReady = useSyncExternalStore(
     () => () => {},
     () => true,
     () => false,
@@ -868,6 +1051,17 @@ export function ProgramsPage() {
     }
     return next
   }, [pd, jc.data?.ps, js.data?.sn, nSta, manualQuickRunPid])
+
+  const nextRun = useMemo(
+    () =>
+      findNextScheduledRun(
+        pd,
+        jc.data?.devt,
+        Number(jc.data?.sunrise ?? 360),
+        Number(jc.data?.sunset ?? 1080),
+      ),
+    [pd, jc.data?.devt, jc.data?.sunrise, jc.data?.sunset],
+  )
 
   const stopProgramStations = useCallback(
     async (pid: number) => {
@@ -928,43 +1122,13 @@ export function ProgramsPage() {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   )
 
-  useEffect(() => {
-    if (!editor) return
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') setEditor(null)
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => {
-      document.body.style.overflow = prevOverflow
-      document.removeEventListener('keydown', onKeyDown)
-    }
-  }, [editor])
-
-  // Sync <details open> from editor without listing full `editor` (avoids collapsing panels on every keystroke).
-  useLayoutEffect(() => {
-    if (!editor) return
-    const el = restrictDetailsRef.current
-    if (el) el.open = editor.restriction !== 'none'
-  }, [editor?.pid, editor?.restriction]) // eslint-disable-line react-hooks/exhaustive-deps -- omit full `editor` to avoid collapsing <details> on every field change
-
-  const addlSlotsKey = editor?.fixedSlotOn.map((v) => (v ? '1' : '0')).join('') ?? ''
-
-  useLayoutEffect(() => {
-    if (!editor) return
-    const el = addlDetailsRef.current
-    if (el) {
-      el.open =
-        editor.startMode === 'fixed' ||
-        editor.repeatCount > 0 ||
-        editor.fixedSlotOn.some(Boolean)
-    }
-  }, [editor?.pid, editor?.startMode, editor?.repeatCount, addlSlotsKey]) // eslint-disable-line react-hooks/exhaustive-deps -- omit full `editor` to avoid collapsing <details> on every field change
-
   const normalizedRunDurs = useMemo(
     () => Array.from({ length: nSta }, (_, i) => runDurs[i] ?? 0),
     [nSta, runDurs],
+  )
+  const runOnceTotalSeconds = useMemo(
+    () => stationOrder.reduce((sum, i) => sum + (normalizedRunDurs[i] ?? 0), 0),
+    [stationOrder, normalizedRunDurs],
   )
 
   const editorTotalRunSeconds = useMemo(() => {
@@ -977,15 +1141,23 @@ export function ProgramsPage() {
 
   const err = pr.error instanceof Error ? pr.error.message : null
 
-  async function runAction(task: () => Promise<unknown>, successMessage: string) {
+  /** Runs a mutation, reporting success / failure in the page (and open sheet) banner. */
+  async function runAction(task: () => Promise<unknown>, successMessage: string): Promise<boolean> {
     setActionErr(null)
     setActionMsg(null)
     try {
       await task()
       setActionMsg(successMessage)
+      return true
     } catch (e) {
       setActionErr(e instanceof Error ? e.message : 'Program action failed')
+      return false
     }
+  }
+
+  function closeEditor() {
+    setEditor(null)
+    setActionErr(null)
   }
 
   async function saveEditor() {
@@ -1093,15 +1265,16 @@ export function ProgramsPage() {
     ]
 
     const payload = buildSaveProgramPayload(row, editor.pid)
-    await runAction(
+    const ok = await runAction(
       () => save.mutateAsync(payload),
       editor.pid >= 0 ? 'Program saved.' : 'Program created.',
     )
-    setEditor(null)
+    // Keep the sheet open on failure so the edits are not lost; the error shows inside it.
+    if (ok) setEditor(null)
   }
 
-  function setDayType(next: ProgramDayType) {
-    setEditor((s) => (s ? { ...s, dayType: next } : s))
+  function patchEditor(patch: Partial<ProgramEditorState>) {
+    setEditor((s) => (s ? { ...s, ...patch } : s))
   }
 
   const runModalStarting =
@@ -1109,895 +1282,891 @@ export function ProgramsPage() {
     startingProgramPid === runProgramPid &&
     !runningProgramPids.has(runProgramPid)
 
+  const enabledCount = pd.filter((row) => flagEnabled(row[0])).length
+  const runningNames = [...runningProgramPids].map((p) => pd[p]?.[5] || `Program ${p + 1}`)
+  const nextLabel = nextRun
+    ? `${nextRun.name} ${
+        nextRun.dayOffset === 0
+          ? 'at'
+          : nextRun.dayOffset === 1
+            ? 'tomorrow'
+            : FULL_DAY_NAMES[(nextRun.weekday + 6) % 7]
+      } ${formatMinutesWall(nextRun.startMin, prefs.is24Hour)}`
+    : null
+  const heroSubtitle = pr.isLoading
+    ? 'Loading programs…'
+    : pd.length === 0
+      ? 'No programs yet'
+      : [`${enabledCount} active`, nextLabel ? `next: ${nextLabel}` : null].filter(Boolean).join(' · ')
+
+  const sheetOpen = editor !== null || runOnceOpen || runProgramPid !== null
+  const sheetBanner = actionErr ? <ErrorBox message={actionErr} /> : null
+  const runProgramRow = runProgramPid !== null ? pd[runProgramPid] : undefined
+  const runProgramName =
+    runProgramPid !== null ? runProgramRow?.[5] || `Program ${runProgramPid + 1}` : ''
+  const enabledZoneIds = stationOrder.filter((idx) => !isStationDisabled(stnDis, idx))
+  const allZonesDisabled = Array.from({ length: nSta }, (_, i) => i).every((i) =>
+    isStationDisabled(stnDis, i),
+  )
+
   return (
-    <div>
-      <h1 className={styles.title}>Programs</h1>
-      {err ? <ErrorBox message={err} /> : null}
-      {actionErr ? <ErrorBox message={actionErr} /> : null}
-      {actionMsg ? <p className={styles.ok}>{actionMsg}</p> : null}
-      <div className={styles.toolbar}>
-        <Button variant="primary" onClick={() => setEditor(createEditorState(null, -1, nSta))}>
-          New program
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setRunOnceQo(2)
-            setRunOnceUwt(0)
-            setRunOnceOpen(true)
+    <>
+      <PageHero
+        title="Programs"
+        eyebrow={
+          runningNames.length > 0 ? (
+            <Pill tone="glass" icon={<span className={styles.liveDot} aria-hidden />}>
+              Running · {runningNames.join(', ')}
+            </Pill>
+          ) : undefined
+        }
+        subtitle={heroSubtitle}
+        actions={
+          <>
+            <Button
+              variant="light"
+              startIcon={<Plus size={17} aria-hidden />}
+              onClick={() => {
+                setActionErr(null)
+                setEditor(createEditorState(null, -1, nSta))
+              }}
+            >
+              New program
+            </Button>
+            <Button
+              variant="glass"
+              startIcon={<Play size={16} aria-hidden />}
+              onClick={() => {
+                setActionErr(null)
+                setRunOnceQo(2)
+                setRunOnceUwt(0)
+                setRunOnceOpen(true)
+              }}
+            >
+              Run once
+            </Button>
+            <Button
+              variant="glass"
+              startIcon={<CalendarClock size={16} aria-hidden />}
+              onClick={() => void navigate({ to: '/preview' })}
+            >
+              Day preview
+            </Button>
+          </>
+        }
+      />
+      <PageBody>
+        {err ? <ErrorBox message={err} /> : null}
+        {!sheetOpen && actionErr ? <ErrorBox message={actionErr} /> : null}
+        {actionMsg ? (
+          <p className={styles.ok} role="status">
+            <CheckCircle2 size={17} aria-hidden />
+            {actionMsg}
+          </p>
+        ) : null}
+        {pr.isLoading ? (
+          <div className={styles.loading}>
+            <Spinner />
+          </div>
+        ) : null}
+
+        {!pr.isLoading && !err && pd.length === 0 ? (
+          <div className={styles.emptyCard}>
+            <EmptyState
+              icon={<CalendarDays size={26} aria-hidden />}
+              title="No programs yet"
+              description="Programs water your zones automatically on the days and times you choose."
+              action={
+                <Button
+                  startIcon={<Plus size={17} aria-hidden />}
+                  onClick={() => setEditor(createEditorState(null, -1, nSta))}
+                >
+                  New program
+                </Button>
+              }
+            />
+          </div>
+        ) : null}
+
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={(e: DragStartEvent) => setActiveDragId(e.active.id as string)}
+          onDragCancel={() => setActiveDragId(null)}
+          onDragEnd={async (e: DragEndEvent) => {
+            const { active, over } = e
+            if (!over || active.id === over.id) {
+              setActiveDragId(null)
+              return
+            }
+            const oldIndex = sortableIds.indexOf(String(active.id))
+            const newIndex = sortableIds.indexOf(String(over.id))
+            if (oldIndex < 0 || newIndex < 0) {
+              setActiveDragId(null)
+              return
+            }
+
+            const jpKey = qk.jp()
+            const previous = qc.getQueryData(jpKey)
+
+            flushSync(() => {
+              qc.setQueryData(jpKey, (old) => {
+                const raw = old as Record<string, unknown> | undefined
+                if (!raw) return old
+                const prevPd = (raw.pd as ProgramRow[] | undefined) ?? []
+                if (
+                  oldIndex >= prevPd.length ||
+                  newIndex >= prevPd.length ||
+                  oldIndex === newIndex
+                )
+                  return old
+                return { ...raw, pd: arrayMove(prevPd, oldIndex, newIndex) }
+              })
+            })
+            setActiveDragId(null)
+
+            setActionErr(null)
+            setActionMsg(null)
+            try {
+              await reorder.mutateAsync({ from: oldIndex, to: newIndex })
+              setActionMsg('Programs reordered.')
+            } catch (err) {
+              if (previous !== undefined) qc.setQueryData(jpKey, previous)
+              setActionErr(err instanceof Error ? err.message : 'Program action failed')
+            }
           }}
         >
-          Run-once
-        </Button>
-        <Link to="/preview" className={styles.toolbarLink}>
-          Day preview
-        </Link>
-      </div>
-      {pr.isLoading ? <Spinner /> : null}
-
-      {runProgramPid != null ? (
-        <Card title={`Run program #${runProgramPid + 1}`}>
-          <p className={styles.hint}>Choose queue behavior and whether to apply weather adjustment.</p>
-          <fieldset className={styles.qoFieldset} disabled={runModalStarting}>
-            <legend className={styles.qoLegend}>Queue</legend>
-            <label className={styles.qoLabel}>
-              <input
-                type="radio"
-                name="prog-qo"
-                checked={runProgQo === 0}
-                onChange={() => setRunProgQo(0)}
-              />
-              Run after others (append)
-            </label>
-            <label className={styles.qoLabel}>
-              <input
-                type="radio"
-                name="prog-qo"
-                checked={runProgQo === 1}
-                onChange={() => setRunProgQo(1)}
-              />
-              Run now and pause others (insert)
-            </label>
-            <label className={styles.qoLabel}>
-              <input
-                type="radio"
-                name="prog-qo"
-                checked={runProgQo === 2}
-                onChange={() => setRunProgQo(2)}
-              />
-              Run now and cancel others (replace)
-            </label>
-          </fieldset>
-          <label className={styles.qoCheck}>
-            <input
-              type="checkbox"
-              disabled={runModalStarting}
-              checked={runProgUwt === 1}
-              onChange={(e) => setRunProgUwt(e.target.checked ? 1 : 0)}
-            />
-            Use weather adjustment
-          </label>
-          <div className={styles.row}>
-            <Button
-              disabled={mp.isPending || runModalStarting}
-              aria-busy={runModalStarting}
-              startIcon={runModalStarting ? <Spinner /> : undefined}
-              onClick={() => {
-                const pid = runProgramPid
-                if (pid == null) return
-                void runAction(async () => {
-                  setStartingProgramPid(pid)
-                  try {
-                    await mp.mutateAsync({ pid, uwt: runProgUwt, qo: runProgQo })
-                    setManualQuickRunPid(pid)
-                    writeQuickRunManualPid(pid)
-                  } catch (e) {
-                    setStartingProgramPid(null)
-                    throw e
-                  }
-                }, 'Program started.')
-              }}
-            >
-              {runModalStarting ? 'Starting…' : 'Start program'}
-            </Button>
-            <Button variant="ghost" disabled={runModalStarting} onClick={() => setRunProgramPid(null)}>
-              Cancel
-            </Button>
-          </div>
-        </Card>
-      ) : null}
-
-      {runOnceOpen ? (
-        <Card title="Run-once">
-          <p className={styles.hint}>
-            Set each zone duration (0 = skip). Choose how this run interacts with the current queue.
-          </p>
-          <fieldset className={styles.qoFieldset}>
-            <legend className={styles.qoLegend}>Queue</legend>
-            <label className={styles.qoLabel}>
-              <input
-                type="radio"
-                name="runonce-qo"
-                checked={runOnceQo === 0}
-                onChange={() => setRunOnceQo(0)}
-              />
-              Run after others (append)
-            </label>
-            <label className={styles.qoLabel}>
-              <input
-                type="radio"
-                name="runonce-qo"
-                checked={runOnceQo === 1}
-                onChange={() => setRunOnceQo(1)}
-              />
-              Run now and pause others (insert)
-            </label>
-            <label className={styles.qoLabel}>
-              <input
-                type="radio"
-                name="runonce-qo"
-                checked={runOnceQo === 2}
-                onChange={() => setRunOnceQo(2)}
-              />
-              Run now and cancel others (replace)
-            </label>
-          </fieldset>
-          <label className={styles.qoCheck}>
-            <input
-              type="checkbox"
-              checked={runOnceUwt === 1}
-              onChange={(e) => setRunOnceUwt(e.target.checked ? 1 : 0)}
-            />
-            Use weather adjustment for this run
-          </label>
-          <div className={styles.durGrid}>
-            {stationOrder.map((i) => {
-              const v = normalizedRunDurs[i] ?? 0
-              return (
-              <div
-                key={i}
-                className={`${styles.runOnceItem} ${isStationDisabled(stnDis, i) ? styles.itemMuted : ''}`}
-              >
-                <Label>{stationDisplayName(i, stationNames, prefs.showStationNum)}</Label>
-                <DurationInput
-                  idBase={`run-once-${i}`}
-                  valueSeconds={v}
-                  maxSeconds={64800}
-                  onChange={(seconds) => {
-                    setRunDurs((d) => {
-                      const c = [...d]
-                      c[i] = seconds
-                      return c
-                    })
+          <SortableContext items={sortableIds} strategy={rectSortingStrategy}>
+            <div className={styles.list}>
+              {pd.map((prog, pid) => (
+                <SortableProgramCard
+                  key={pid}
+                  id={String(pid)}
+                  sortDisabled={reorder.isPending}
+                  prog={prog}
+                  pid={pid}
+                  stationNames={stationNames}
+                  stnDis={stnDis}
+                  nSta={nSta}
+                  setEditor={(next) => {
+                    setActionErr(null)
+                    setEditor(next)
+                  }}
+                  toggleEn={toggleEn}
+                  toggleUwt={toggleUwt}
+                  del={del}
+                  runAction={runAction}
+                  stationOrder={stationOrder}
+                  showStationNum={prefs.showStationNum}
+                  is24Hour={prefs.is24Hour}
+                  programRunning={runningProgramPids.has(pid)}
+                  runNowBlocked={startingProgramPid !== null}
+                  stopProgramStationsPending={manualStation.isPending}
+                  onProgramStop={(p) => {
+                    const row = pd[p]
+                    const label = row?.[5]?.trim() ? String(row[5]) : `Program ${p + 1}`
+                    void runAction(() => stopProgramStations(p), `Program “${label}” stopped.`)
+                  }}
+                  onRunNow={(pid) => {
+                    const row = pd[pid]
+                    const uwt = row ? (flagUseWeather(row[0]) ? 1 : 0) : 1
+                    setActionErr(null)
+                    setRunProgQo(2)
+                    setRunProgUwt(uwt)
+                    setRunProgramPid(pid)
                   }}
                 />
-                <p className={styles.mutedMini}>{formatDuration(v)}</p>
+              ))}
+            </div>
+          </SortableContext>
+          <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' }}>
+            {activeDragId != null ? (
+              <div className={styles.dragOverlayCard}>
+                <span
+                  className={styles.dragOverlayIcon}
+                  style={{ background: programGradient(Number(activeDragId)) }}
+                  aria-hidden
+                />
+                <span className={styles.dragOverlayTitle}>
+                  {pd[Number(activeDragId)]?.[5] || `Program ${Number(activeDragId) + 1}`}
+                </span>
               </div>
-              )
-            })}
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+        {pd.length > 1 ? (
+          <p className={styles.reorderHint}>Drag the ⠿ handle to change the program order (and numbering).</p>
+        ) : null}
+      </PageBody>
+
+      {/* ---------- Run program sheet ---------- */}
+      {portalReady && runProgramPid !== null ? (
+        <Sheet
+          title={`Run ${runProgramName}`}
+          subtitle={`Program #${runProgramPid + 1}`}
+          icon={<Play size={20} aria-hidden />}
+          iconBackground={programGradient(runProgramPid)}
+          onClose={() => {
+            if (!runModalStarting) setRunProgramPid(null)
+          }}
+          footer={
+            <>
+              <Button variant="ghost" disabled={runModalStarting} onClick={() => setRunProgramPid(null)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={mp.isPending || runModalStarting}
+                aria-busy={runModalStarting}
+                startIcon={runModalStarting ? <Spinner /> : <Play size={16} aria-hidden />}
+                onClick={() => {
+                  const pid = runProgramPid
+                  if (pid == null) return
+                  void runAction(async () => {
+                    setStartingProgramPid(pid)
+                    try {
+                      await mp.mutateAsync({ pid, uwt: runProgUwt, qo: runProgQo })
+                      setManualQuickRunPid(pid)
+                      writeQuickRunManualPid(pid)
+                    } catch (e) {
+                      setStartingProgramPid(null)
+                      throw e
+                    }
+                  }, 'Program started.')
+                }}
+              >
+                {runModalStarting ? 'Starting…' : 'Start program'}
+              </Button>
+            </>
+          }
+        >
+          {sheetBanner}
+          {runProgramRow ? (
+            <p className={styles.sheetLead}>
+              Scheduled {summarizeStarts(runProgramRow[3], flagFixedStart(runProgramRow[0]), prefs.is24Hour)} ·{' '}
+              {formatDuration(stationOrder.reduce((sum, idx) => sum + (runProgramRow[4][idx] ?? 0), 0))} in
+              total. Starting it now runs each of its zones once.
+            </p>
+          ) : null}
+          <div className={styles.switchCard}>
+            <Switch
+              checked={runProgUwt === 1}
+              disabled={runModalStarting}
+              onChange={(on) => setRunProgUwt(on ? 1 : 0)}
+              label="Use weather adjustment"
+              description="Scale durations by the current watering level."
+            />
           </div>
-          <div className={styles.row}>
-            <Button
-              variant="ghost"
-              onClick={() => setRunDurs(Array.from({ length: nSta }, () => 300))}
-            >
-              Set all to 5 min
-            </Button>
-            <Button
-              variant="ghost"
-              onClick={() => setRunDurs(Array.from({ length: nSta }, () => 0))}
-            >
-              Clear all
-            </Button>
-          </div>
-          <div className={styles.row}>
-            <Button
-              disabled={cr.isPending}
-              onClick={async () => {
-                await runAction(
-                  () =>
-                    cr.mutateAsync({
-                      t: JSON.stringify(normalizedRunDurs),
-                      uwt: runOnceUwt,
-                      qo: runOnceQo,
-                    }),
-                  'Run-once started.',
-                )
-                setRunOnceOpen(false)
-              }}
-            >
-              Start run-once
-            </Button>
-            <Button variant="ghost" onClick={() => setRunOnceOpen(false)}>
-              Cancel
-            </Button>
-          </div>
-        </Card>
+          <QueuePicker
+            name="prog-qo"
+            value={runProgQo}
+            onChange={setRunProgQo}
+            disabled={runModalStarting}
+          />
+        </Sheet>
       ) : null}
 
-      {editorPortalReady && editor
-        ? createPortal(
-            <div
-              className={styles.modalOverlay}
-              onClick={() => setEditor(null)}
-              role="presentation"
-            >
-              <div
-                className={styles.modalPanel}
-                onClick={(e) => e.stopPropagation()}
-                role="dialog"
-                aria-modal="true"
-                aria-label={editor.pid >= 0 ? `Edit program ${editor.pid + 1}` : 'New program'}
+      {/* ---------- Run-once sheet ---------- */}
+      {portalReady && runOnceOpen ? (
+        <Sheet
+          title="Run once"
+          subtitle="Water chosen zones one time, without saving a program"
+          icon={<Play size={20} aria-hidden />}
+          size="full"
+          onClose={() => setRunOnceOpen(false)}
+          footer={
+            <>
+              <span className={styles.footerTotal}>
+                Total <strong>{formatDuration(runOnceTotalSeconds)}</strong>
+              </span>
+              <Button variant="ghost" onClick={() => setRunOnceOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={cr.isPending}
+                startIcon={<Play size={16} aria-hidden />}
+                onClick={async () => {
+                  const ok = await runAction(
+                    () =>
+                      cr.mutateAsync({
+                        t: JSON.stringify(normalizedRunDurs),
+                        uwt: runOnceUwt,
+                        qo: runOnceQo,
+                      }),
+                    'Run-once started.',
+                  )
+                  if (ok) setRunOnceOpen(false)
+                }}
               >
-                <Card
-                  className={styles.modalCard}
-                  title={editor.pid >= 0 ? `Edit Program #${editor.pid + 1}` : 'New Program'}
-                  titleAction={
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className={styles.modalCloseBtn}
-                      aria-label="Close"
-                      onClick={() => setEditor(null)}
-                    >
-                      ×
-                    </Button>
-                  }
+                Start run-once
+              </Button>
+            </>
+          }
+        >
+          {sheetBanner}
+          <div className={styles.switchCard}>
+            <Switch
+              checked={runOnceUwt === 1}
+              onChange={(on) => setRunOnceUwt(on ? 1 : 0)}
+              label="Use weather adjustment for this run"
+              description="Scale the durations below by the current watering level."
+            />
+          </div>
+          <SheetSection
+            title="Zone durations"
+            icon={<Droplets size={16} aria-hidden />}
+            aside={
+              <div className={styles.inlineActions}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => setRunDurs(Array.from({ length: nSta }, () => 300))}
                 >
-                  <div className={styles.editorForm}>
-                    <div className={`${styles.editorBlock} ${styles.editorPanel}`}>
-                      <div className={styles.editorSectionHeader}>
-                        <div className={styles.editorSectionTitleWrap}>
-                          <SlidersHorizontal className={styles.editorSectionIcon} size={15} aria-hidden />
-                          <div className={styles.editorSectionText}>
-                            <p className={styles.sectionLabel}>Basics</p>
-                            <p className={styles.sectionHint}>Program identity and global behavior</p>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant={editor.enabled ? 'primary' : 'secondary'}
-                          className={styles.headerToggle}
-                          onClick={() =>
-                            setEditor((s) => (s ? { ...s, enabled: !s.enabled } : s))
-                          }
-                        >
-                          {editor.enabled ? 'On' : 'Off'}
-                        </Button>
-                      </div>
-                      <div className={styles.programNameField}>
-                        <Label htmlFor="program-name">Program name</Label>
-                        <Input
-                          id="program-name"
-                          value={editor.name}
-                          maxLength={32}
-                          onChange={(e) => setEditor((s) => (s ? { ...s, name: e.target.value } : s))}
-                        />
-                      </div>
-                      <div className={styles.inlineToggles}>
-                        <Button
-                          type="button"
-                          variant={editor.useWeather ? 'primary' : 'secondary'}
-                          className={styles.inlineToggleBtn}
-                          onClick={() =>
-                            setEditor((s) => (s ? { ...s, useWeather: !s.useWeather } : s))
-                          }
-                        >
-                          Weather adjust
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={editor.keepDateRange ? 'primary' : 'secondary'}
-                          className={styles.inlineToggleBtn}
-                          onClick={() =>
-                            setEditor((s) => (s ? { ...s, keepDateRange: !s.keepDateRange } : s))
-                          }
-                        >
-                          Date range
-                        </Button>
-                      </div>
-                      {editor.keepDateRange ? (
-                        <div className={styles.dateRangeGrid}>
-                          <div>
-                            <Label htmlFor="dr-from">From (MM/DD)</Label>
-                            <Input
-                              id="dr-from"
-                              placeholder="01/01"
-                              value={formatOsDateMmDd(editor.from)}
-                              onChange={(e) => {
-                                const c = parseMmDdToOsDate(e.target.value)
-                                if (c !== null) setEditor((s) => (s ? { ...s, from: c } : s))
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor="dr-to">To (MM/DD)</Label>
-                            <Input
-                              id="dr-to"
-                              placeholder="12/31"
-                              value={formatOsDateMmDd(editor.to)}
-                              onChange={(e) => {
-                                const c = parseMmDdToOsDate(e.target.value)
-                                if (c !== null) setEditor((s) => (s ? { ...s, to: c } : s))
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ) : null}
+                  Set all to 5 min
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setRunDurs(Array.from({ length: nSta }, () => 0))}
+                >
+                  Clear all
+                </Button>
+              </div>
+            }
+          >
+            <p className={styles.sectionHint}>0 skips the zone.</p>
+            <div className={styles.zoneEditGrid}>
+              {stationOrder.map((i) => {
+                const v = normalizedRunDurs[i] ?? 0
+                const name = stationDisplayName(i, stationNames, prefs.showStationNum)
+                return (
+                  <div
+                    key={i}
+                    className={cx(
+                      styles.zoneEdit,
+                      v > 0 && styles.zoneEditActive,
+                      isStationDisabled(stnDis, i) && styles.zoneEditMuted,
+                    )}
+                  >
+                    <div className={styles.zoneEditHead}>
+                      <span className={styles.zoneEditName}>{name}</span>
+                      <span className={styles.zoneEditDur}>{v > 0 ? formatDuration(v) : 'Skip'}</span>
                     </div>
+                    <DurationInput
+                      idBase={`run-once-${i}`}
+                      label={`Run duration for ${name}`}
+                      valueSeconds={v}
+                      maxSeconds={64800}
+                      onChange={(seconds) => {
+                        setRunDurs((d) => {
+                          const c = [...d]
+                          c[i] = seconds
+                          return c
+                        })
+                      }}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          </SheetSection>
+          <QueuePicker name="runonce-qo" value={runOnceQo} onChange={setRunOnceQo} />
+        </Sheet>
+      ) : null}
 
-                    <div className={`${styles.editorBlock} ${styles.editorPanel}`}>
-                      <div className={styles.editorSectionHeader}>
-                        <div className={styles.editorSectionTitleWrap}>
-                          <CalendarDays className={styles.editorSectionIcon} size={15} aria-hidden />
-                          <div className={styles.editorSectionText}>
-                            <p className={styles.sectionLabel}>Schedule</p>
-                            <p className={styles.sectionHint}>When this program is eligible to run</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className={styles.segmentRowWrap}>
-                        <Button
+      {/* ---------- Program editor sheet ---------- */}
+      {portalReady && editor ? (
+        <Sheet
+          title={editor.pid >= 0 ? 'Edit program' : 'New program'}
+          subtitle={
+            editor.pid >= 0
+              ? `Program #${editor.pid + 1}${editor.name.trim() ? ` · ${editor.name.trim()}` : ''}`
+              : 'Choose days, a start time and how long each zone waters'
+          }
+          icon={<CalendarDays size={20} aria-hidden />}
+          iconBackground={programGradient(editor.pid >= 0 ? editor.pid : pd.length)}
+          size="full"
+          onClose={closeEditor}
+          footer={
+            <>
+              <span className={styles.footerTotal}>
+                Total <strong>{formatDuration(editorTotalRunSeconds)}</strong>
+              </span>
+              <Button variant="ghost" onClick={closeEditor}>
+                Cancel
+              </Button>
+              <Button disabled={save.isPending} onClick={saveEditor}>
+                {editor.pid >= 0 ? 'Save' : 'Create program'}
+              </Button>
+            </>
+          }
+        >
+          {sheetBanner}
+
+          <SheetSection title="Basics">
+            <div className={styles.nameRow}>
+              <div className={styles.nameField}>
+                <Label htmlFor="program-name">Program name</Label>
+                <Input
+                  id="program-name"
+                  value={editor.name}
+                  maxLength={32}
+                  placeholder={editor.pid >= 0 ? `Program ${editor.pid + 1}` : 'e.g. Morning lawn'}
+                  onChange={(e) => patchEditor({ name: e.target.value })}
+                />
+              </div>
+              <div className={styles.enabledField}>
+                <Switch
+                  checked={editor.enabled}
+                  onChange={(enabled) => patchEditor({ enabled })}
+                  label="Enabled"
+                  description={editor.enabled ? 'Runs on its schedule' : 'Never runs on its own'}
+                />
+              </div>
+            </div>
+          </SheetSection>
+
+          <SheetSection title="When" icon={<CalendarDays size={16} aria-hidden />}>
+            <div className={styles.whenGrid}>
+              <div className={styles.whenDays}>
+                <p className={styles.fieldLabel}>Days</p>
+                {editor.dayType === 'weekly' ? (
+                  <>
+                    <div className={styles.dayChips} role="group" aria-label="Days of the week">
+                      {DAY_NAMES.map((day, idx) => (
+                        <button
+                          key={day}
                           type="button"
-                          variant={editor.dayType === 'weekly' ? 'primary' : 'secondary'}
-                          onClick={() => setDayType('weekly')}
+                          className={cx(styles.dayChip, editor.weekdays[idx] && styles.dayChipOn)}
+                          aria-pressed={editor.weekdays[idx]}
+                          aria-label={FULL_DAY_NAMES[idx]}
+                          title={FULL_DAY_NAMES[idx]}
+                          onClick={() =>
+                            setEditor((s) => {
+                              if (!s) return s
+                              const next = [...s.weekdays]
+                              next[idx] = !next[idx]
+                              return { ...s, weekdays: next }
+                            })
+                          }
                         >
-                          Weekly
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={editor.dayType === 'interval' ? 'primary' : 'secondary'}
-                          onClick={() => setDayType('interval')}
-                        >
-                          Interval
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={editor.dayType === 'single' ? 'primary' : 'secondary'}
-                          onClick={() => setDayType('single')}
-                        >
-                          Single run
-                        </Button>
-                        <Button
-                          type="button"
-                          variant={editor.dayType === 'monthly' ? 'primary' : 'secondary'}
-                          onClick={() => setDayType('monthly')}
-                        >
-                          Monthly
-                        </Button>
-                      </div>
-
-                      {editor.dayType === 'weekly' ? (
-                        <div className={styles.weekdays}>
-                          {DAY_NAMES.map((day, idx) => (
-                            <label key={day} className={styles.dayChip}>
-                              <input
-                                type="checkbox"
-                                checked={editor.weekdays[idx]}
-                                onChange={(e) =>
-                                  setEditor((s) => {
-                                    if (!s) return s
-                                    const next = [...s.weekdays]
-                                    next[idx] = e.target.checked
-                                    return { ...s, weekdays: next }
-                                  })
-                                }
-                              />
-                              <span title={FULL_DAY_NAMES[idx]}>{day}</span>
-                            </label>
-                          ))}
-                        </div>
-                      ) : null}
-
-                      {editor.dayType === 'interval' ? (
-                        <div className={styles.repeatFields}>
-                          <div className={styles.timeFieldWrap}>
-                            <Label htmlFor="int-every">Every N days</Label>
-                            <Input
-                              id="int-every"
-                              className={styles.numberInput}
-                              type="number"
-                              min={2}
-                              max={128}
-                              value={editor.intervalEvery}
-                              onChange={(e) =>
-                                setEditor((s) =>
-                                  s ? { ...s, intervalEvery: parseInt(e.target.value, 10) || 2 } : s,
-                                )
-                              }
-                            />
-                          </div>
-                          <div className={styles.timeFieldWrap}>
-                            <Label htmlFor="int-start">Starting in (0 … N−1)</Label>
-                            <Input
-                              id="int-start"
-                              className={styles.numberInput}
-                              type="number"
-                              min={0}
-                              max={127}
-                              value={editor.intervalStarting}
-                              onChange={(e) =>
-                                setEditor((s) =>
-                                  s ? { ...s, intervalStarting: parseInt(e.target.value, 10) || 0 } : s,
-                                )
-                              }
-                            />
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {editor.dayType === 'single' ? (
-                        <div className={styles.timeFieldWrap}>
-                          <Label htmlFor="single-date">Run date</Label>
-                          <Input
-                            id="single-date"
-                            type="date"
-                            value={epochDaysToIsoDate(editor.singleEpochDay)}
-                            onChange={(e) => {
-                              const ep = isoDateToEpochDays(e.target.value)
-                              if (ep !== null)
-                                setEditor((s) => (s ? { ...s, singleEpochDay: ep } : s))
-                            }}
-                          />
-                        </div>
-                      ) : null}
-
-                      {editor.dayType === 'monthly' ? (
-                        <div className={styles.timeFieldWrap}>
-                          <Label htmlFor="month-day">Day of month</Label>
-                          <Input
-                            id="month-day"
-                            className={styles.numberInput}
-                            type="number"
-                            min={0}
-                            max={31}
-                            value={editor.monthlyDay}
-                            onChange={(e) =>
-                              setEditor((s) =>
-                                s ? { ...s, monthlyDay: parseInt(e.target.value, 10) || 0 } : s,
-                              )
-                            }
-                          />
-                          <p className={styles.helpMiniTight}>Use 0 for the last day of the month.</p>
-                        </div>
-                      ) : null}
-
-                      <details
-                        ref={restrictDetailsRef}
-                        key={`restrict-${editor.pid}`}
-                        className={styles.editorExtra}
+                          {day}
+                        </button>
+                      ))}
+                    </div>
+                    <div className={styles.dayPresets}>
+                      <button
+                        type="button"
+                        className={styles.linkBtn}
+                        onClick={() => patchEditor({ weekdays: [true, true, true, true, true, true, true] })}
                       >
-                        <summary className={styles.editorExtraSummary}>
-                          <span className={styles.extraSummaryMain}>
-                            <span className={styles.extraChevron} aria-hidden>
-                              ▸
-                            </span>
-                            Day restrictions
-                          </span>
-                          {editor.restriction !== 'none' ? (
-                            <span className={styles.extraBadge}>
-                              {editor.restriction === 'odd' ? 'Odd' : 'Even'}
-                            </span>
-                          ) : null}
-                        </summary>
-                        <div className={styles.editorExtraBody}>
-                          <p className={styles.helpMiniTight}>
-                            Optional odd/even filter on top of your schedule.
-                          </p>
-                          <div className={styles.segmentRow}>
-                            <Button
-                              type="button"
-                              variant={editor.restriction === 'none' ? 'primary' : 'secondary'}
-                              onClick={() => setEditor((s) => (s ? { ...s, restriction: 'none' } : s))}
-                            >
-                              None
-                            </Button>
-                            <Button
-                              type="button"
-                              variant={editor.restriction === 'odd' ? 'primary' : 'secondary'}
-                              onClick={() => setEditor((s) => (s ? { ...s, restriction: 'odd' } : s))}
-                            >
-                              Odd days
-                            </Button>
-                            <Button
-                              type="button"
-                              variant={editor.restriction === 'even' ? 'primary' : 'secondary'}
-                              onClick={() => setEditor((s) => (s ? { ...s, restriction: 'even' } : s))}
-                            >
-                              Even days
-                            </Button>
-                          </div>
-                        </div>
-                      </details>
-                    </div>
-
-                    <div className={`${styles.editorBlock} ${styles.editorPanel}`}>
-                      <div className={styles.editorSectionHeader}>
-                        <div className={styles.editorSectionTitleWrap}>
-                          <Clock3 className={styles.editorSectionIcon} size={15} aria-hidden />
-                          <div className={styles.editorSectionText}>
-                            <p className={styles.sectionLabel}>Start time</p>
-                            <p className={styles.sectionHint}>Primary start plus optional additional runs</p>
-                          </div>
-                        </div>
-                      </div>
-                      <StartPickEditor
-                        idPrefix="primary"
-                        label="First start"
-                        value={editor.primaryPick}
-                        is24Hour={prefs.is24Hour}
-                        onChange={(primaryPick) => setEditor((s) => (s ? { ...s, primaryPick } : s))}
-                      />
-
-                      <details
-                        ref={addlDetailsRef}
-                        key={`addl-${editor.pid}`}
-                        className={styles.editorExtra}
+                        Every day
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.linkBtn}
+                        onClick={() => patchEditor({ weekdays: [true, true, true, true, true, false, false] })}
                       >
-                        <summary className={styles.editorExtraSummary}>
-                          <span className={styles.extraSummaryMain}>
-                            <span className={styles.extraChevron} aria-hidden>
-                              ▸
-                            </span>
-                            Additional starts
-                          </span>
-                          <span className={styles.extraBadgeMuted}>
-                            {editor.startMode === 'fixed'
-                              ? 'Fixed slots'
-                              : editor.repeatCount > 0
-                                ? `Repeat ×${editor.repeatCount}`
-                                : 'Optional'}
-                          </span>
-                        </summary>
-                        <div className={styles.editorExtraBody}>
-                          <div className={styles.segmentRow}>
-                            <Button
-                              type="button"
-                              variant={editor.startMode === 'repeating' ? 'primary' : 'secondary'}
-                              onClick={() => setEditor((s) => (s ? { ...s, startMode: 'repeating' } : s))}
-                            >
-                              Repeating
-                            </Button>
-                            <Button
-                              type="button"
-                              variant={editor.startMode === 'fixed' ? 'primary' : 'secondary'}
-                              onClick={() => setEditor((s) => (s ? { ...s, startMode: 'fixed' } : s))}
-                            >
-                              Fixed times
-                            </Button>
-                          </div>
-
-                          {editor.startMode === 'repeating' ? (
-                            <div className={styles.repeatFields}>
-                              <div className={styles.timeFieldWrap}>
-                                <Label htmlFor="repeat-count">Repeat count</Label>
-                                <Input
-                                  id="repeat-count"
-                                  className={styles.numberInput}
-                                  type="number"
-                                  min={0}
-                                  value={editor.repeatCount}
-                                  onChange={(e) =>
-                                    setEditor((s) =>
-                                      s ? { ...s, repeatCount: parseInt(e.target.value, 10) || 0 } : s,
-                                    )
-                                  }
-                                />
-                                <p className={styles.helpMiniTight}>
-                                  0 = run only once at the first start.
-                                </p>
-                              </div>
-                              <div className={styles.timeFieldWrap}>
-                                <Label htmlFor="repeat-interval">Every (minutes)</Label>
-                                <Input
-                                  id="repeat-interval"
-                                  className={styles.numberInput}
-                                  type="number"
-                                  min={1}
-                                  value={editor.repeatIntervalMin}
-                                  onChange={(e) =>
-                                    setEditor((s) =>
-                                      s
-                                        ? {
-                                            ...s,
-                                            repeatIntervalMin: parseInt(e.target.value, 10) || 1,
-                                          }
-                                        : s,
-                                    )
-                                  }
-                                />
-                              </div>
-                            </div>
-                          ) : (
-                            <div className={styles.fixedStartsTable}>
-                              {(
-                                [
-                                  ['2', 0, editor.fixedPick1] as const,
-                                  ['3', 1, editor.fixedPick2] as const,
-                                  ['4', 2, editor.fixedPick3] as const,
-                                ] as const
-                              ).map(([label, idx, pick]) => (
-                                <div key={label} className={styles.fixedStartRow}>
-                                  <label className={styles.fixedStartEnable}>
-                                    <input
-                                      type="checkbox"
-                                      checked={editor.fixedSlotOn[idx]}
-                                      onChange={(e) =>
-                                        setEditor((s) => {
-                                          if (!s) return s
-                                          const next = [...s.fixedSlotOn] as [
-                                            boolean,
-                                            boolean,
-                                            boolean,
-                                          ]
-                                          next[idx] = e.target.checked
-                                          return { ...s, fixedSlotOn: next }
-                                        })
-                                      }
-                                    />
-                                    <span>Start {label}</span>
-                                  </label>
-                                  {editor.fixedSlotOn[idx] ? (
-                                    <div className={styles.fixedStartPickWrap}>
-                                      <StartPickEditor
-                                        idPrefix={`fx-${idx}`}
-                                        label=""
-                                        compact
-                                        is24Hour={prefs.is24Hour}
-                                        value={pick}
-                                        onChange={(nextPick) =>
-                                          setEditor((s) => {
-                                            if (!s) return s
-                                            if (idx === 0) return { ...s, fixedPick1: nextPick }
-                                            if (idx === 1) return { ...s, fixedPick2: nextPick }
-                                            return { ...s, fixedPick3: nextPick }
-                                          })
-                                        }
-                                      />
-                                    </div>
-                                  ) : (
-                                    <span className={styles.fixedStartOff}>Off</span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </details>
+                        Weekdays
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.linkBtn}
+                        onClick={() => patchEditor({ weekdays: [true, false, true, false, true, false, false] })}
+                      >
+                        Mon · Wed · Fri
+                      </button>
                     </div>
+                  </>
+                ) : (
+                  <p className={styles.noteBox}>
+                    {editor.dayType === 'interval'
+                      ? `Every ${editor.intervalEvery} days (starting in ${editor.intervalStarting}).`
+                      : editor.dayType === 'monthly'
+                        ? editor.monthlyDay === 0
+                          ? 'Last day of each month.'
+                          : `Day ${editor.monthlyDay} of each month.`
+                        : `Once, on ${epochDaysToIsoDate(editor.singleEpochDay)}.`}{' '}
+                    Change the schedule type under <strong>Advanced</strong>.
+                  </p>
+                )}
+              </div>
+              <div className={styles.whenStart}>
+                {editor.primaryPick.mode === 'clock' ? (
+                  <>
+                    <Label htmlFor="primary-clock">First start</Label>
+                    <ClockInput
+                      id="primary-clock"
+                      minutes={editor.primaryPick.clockMinutes}
+                      is24Hour={prefs.is24Hour}
+                      onChange={(clockMinutes) =>
+                        patchEditor({ primaryPick: { ...editor.primaryPick, mode: 'clock', clockMinutes } })
+                      }
+                    />
+                  </>
+                ) : (
+                  <>
+                    <p className={styles.fieldLabel}>First start</p>
+                    <p className={styles.noteBox}>
+                      <strong>{describePick(editor.primaryPick, prefs.is24Hour)}</strong>. Sun-relative starts
+                      are set under <strong>Advanced</strong>.
+                    </p>
+                  </>
+                )}
+                {editor.startMode === 'fixed' && editor.fixedSlotOn.some(Boolean) ? (
+                  <p className={styles.sectionHint}>
+                    <Clock3 size={12} aria-hidden /> Plus {editor.fixedSlotOn.filter(Boolean).length} more fixed
+                    start time(s) in Advanced.
+                  </p>
+                ) : editor.startMode === 'repeating' && editor.repeatCount > 0 ? (
+                  <p className={styles.sectionHint}>
+                    <Repeat size={12} aria-hidden /> Then repeats {editor.repeatCount}× every{' '}
+                    {editor.repeatIntervalMin} min (Advanced).
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </SheetSection>
 
-                    <div className={`${styles.editorBlock} ${styles.editorPanel}`}>
-                      <div className={styles.editorSectionHeader}>
-                        <div className={styles.editorSectionTitleWrap}>
-                          <Droplets className={styles.editorSectionIcon} size={15} aria-hidden />
-                          <div className={styles.editorSectionText}>
-                            <p className={styles.sectionLabel}>Zones</p>
-                            <p className={styles.sectionHint}>
-                              Total run {formatDuration(editorTotalRunSeconds)}
-                            </p>
-                          </div>
+          <SheetSection
+            title="Zone durations"
+            icon={<Droplets size={16} aria-hidden />}
+            aside={<Pill tone="accent">{formatDuration(editorTotalRunSeconds)} total</Pill>}
+          >
+            {allZonesDisabled ? (
+              <p className={styles.noteBox}>
+                No enabled zones. Turn zones back on under <strong>Zones</strong> to assign durations here.
+              </p>
+            ) : (
+              <>
+                <div className={styles.quickSet} role="group" aria-labelledby="quickset-dur-label">
+                  <span className={styles.quickSetLabel} id="quickset-dur-label">
+                    Set all zones to
+                  </span>
+                  <DurationInput
+                    idBase="prog-quickset"
+                    label="Duration for all zones"
+                    valueSeconds={editor.quickSetDurationSeconds}
+                    maxSeconds={64800}
+                    onChange={(sec) => patchEditor({ quickSetDurationSeconds: sec })}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      const sec = editor.quickSetDurationSeconds
+                      if (sec < 0 || sec > 64800) return
+                      setEditor((s) => {
+                        if (!s) return s
+                        const next = [...s.durations]
+                        for (let i = 0; i < next.length; i++) {
+                          if (!isStationDisabled(stnDis, i)) next[i] = sec
+                        }
+                        return { ...s, durations: next, quickSetDurationSeconds: 0 }
+                      })
+                    }}
+                  >
+                    Apply to all zones
+                  </Button>
+                </div>
+                <div className={styles.zoneEditGrid}>
+                  {enabledZoneIds.map((idx) => {
+                    const v = editor.durations[idx] ?? 0
+                    const name = stationDisplayName(idx, stationNames, prefs.showStationNum)
+                    return (
+                      <div key={idx} className={cx(styles.zoneEdit, v > 0 && styles.zoneEditActive)}>
+                        <div className={styles.zoneEditHead}>
+                          <span className={styles.zoneEditName}>{name}</span>
+                          <span className={styles.zoneEditDur}>{v > 0 ? formatDuration(v) : 'Off'}</span>
                         </div>
-                        <span className={styles.sectionPill}>
-                          <ListChecks size={13} aria-hidden />
-                          {nSta} zones
-                        </span>
-                      </div>
-                      <div className={styles.quickSetRow}>
-                        <div
-                          className={styles.quickSetDurWrap}
-                          role="group"
-                          aria-labelledby="quickset-dur-label"
-                        >
-                          <span className={styles.quickSetDurLabel} id="quickset-dur-label">
-                            Set all zones to
-                          </span>
-                          <DurationInput
-                            idBase="prog-quickset"
-                            valueSeconds={editor.quickSetDurationSeconds}
-                            maxSeconds={64800}
-                            onChange={(sec) =>
-                              setEditor((s) =>
-                                s ? { ...s, quickSetDurationSeconds: sec } : s,
-                              )
-                            }
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          onClick={() => {
-                            const sec = editor.quickSetDurationSeconds
-                            if (sec < 0 || sec > 64800) return
+                        <DurationInput
+                          idBase={`editor-zone-${idx}`}
+                          label={`Duration for ${name}`}
+                          valueSeconds={v}
+                          maxSeconds={64800}
+                          onChange={(seconds) =>
                             setEditor((s) => {
                               if (!s) return s
                               const next = [...s.durations]
-                              for (let i = 0; i < next.length; i++) {
-                                if (!isStationDisabled(stnDis, i)) next[i] = sec
-                              }
-                              return { ...s, durations: next, quickSetDurationSeconds: 0 }
+                              next[idx] = seconds
+                              return { ...s, durations: next }
                             })
-                          }}
-                        >
-                          Apply to all zones
-                        </Button>
+                          }
+                        />
                       </div>
-                      {Array.from({ length: nSta }, (_, i) => i).every((i) =>
-                        isStationDisabled(stnDis, i),
-                      ) ? (
-                        <p className={styles.editorHint}>
-                          No enabled zones. Turn zones back on under <strong>Zones</strong> to assign
-                          durations here.
-                        </p>
-                      ) : (
-                        <div className={styles.editorDurGrid}>
-                          {stationOrder
-                            .filter((idx) => !isStationDisabled(stnDis, idx))
-                            .map((idx) => (
-                              <div
-                                key={idx}
-                                className={`${styles.editorDurZone} ${(editor.durations[idx] ?? 0) > 0 ? styles.editorDurZoneActive : ''}`}
-                              >
-                                <p className={styles.editorDurZoneTitle}>
-                                  {stationDisplayName(idx, stationNames, prefs.showStationNum)}
-                                </p>
-                                <div className={styles.editorDurControls}>
-                                  <DurationInput
-                                    idBase={`editor-zone-${idx}`}
-                                    valueSeconds={editor.durations[idx] ?? 0}
-                                    maxSeconds={64800}
-                                    onChange={(seconds) =>
-                                      setEditor((s) => {
-                                        if (!s) return s
-                                        const next = [...s.durations]
-                                        next[idx] = seconds
-                                        return { ...s, durations: next }
-                                      })
-                                    }
-                                  />
-                                  <p className={styles.editorDurSummary}>
-                                    {formatDuration(editor.durations[idx] ?? 0)}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                    </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
+          </SheetSection>
 
-                    <div className={styles.editorFooter}>
-                      <Button disabled={save.isPending} onClick={saveEditor}>
-                        {editor.pid >= 0
-                          ? `Save · ${editor.name.trim() || `Program ${editor.pid + 1}`}`
-                          : 'Create program'}
-                      </Button>
-                      {editor.pid >= 0 ? (
-                        <Button
-                          type="button"
-                          variant="danger"
-                          disabled={del.isPending}
-                          onClick={async () => {
-                            if (
-                              window.confirm(
-                                `Delete "${editor.name || `Program ${editor.pid + 1}`}"?`,
-                              )
-                            ) {
-                              await runAction(() => del.mutateAsync(editor.pid), 'Program deleted.')
-                              setEditor(null)
-                            }
-                          }}
-                        >
-                          Delete
-                        </Button>
-                      ) : null}
-                      <Button variant="ghost" onClick={() => setEditor(null)}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
-
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        modifiers={[restrictToVerticalAxis]}
-        onDragStart={(e: DragStartEvent) => setActiveDragId(e.active.id as string)}
-        onDragCancel={() => setActiveDragId(null)}
-        onDragEnd={async (e: DragEndEvent) => {
-          const { active, over } = e
-          if (!over || active.id === over.id) {
-            setActiveDragId(null)
-            return
-          }
-          const oldIndex = sortableIds.indexOf(String(active.id))
-          const newIndex = sortableIds.indexOf(String(over.id))
-          if (oldIndex < 0 || newIndex < 0) {
-            setActiveDragId(null)
-            return
-          }
-
-          const jpKey = qk.jp()
-          const previous = qc.getQueryData(jpKey)
-
-          flushSync(() => {
-            qc.setQueryData(jpKey, (old) => {
-              const raw = old as Record<string, unknown> | undefined
-              if (!raw) return old
-              const prevPd = (raw.pd as ProgramRow[] | undefined) ?? []
-              if (
-                oldIndex >= prevPd.length ||
-                newIndex >= prevPd.length ||
-                oldIndex === newIndex
-              )
-                return old
-              return { ...raw, pd: arrayMove(prevPd, oldIndex, newIndex) }
-            })
-          })
-          setActiveDragId(null)
-
-          setActionErr(null)
-          setActionMsg(null)
-          try {
-            await reorder.mutateAsync({ from: oldIndex, to: newIndex })
-            setActionMsg('Programs reordered.')
-          } catch (err) {
-            if (previous !== undefined) qc.setQueryData(jpKey, previous)
-            setActionErr(err instanceof Error ? err.message : 'Program action failed')
-          }
-        }}
-      >
-        <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
-          <div className={styles.list}>
-            {pd.map((prog, pid) => (
-              <SortableProgramRow
-                key={pid}
-                id={String(pid)}
-                sortDisabled={reorder.isPending}
-                prog={prog}
-                pid={pid}
-                stationNames={stationNames}
-                stnDis={stnDis}
-                nSta={nSta}
-                setEditor={setEditor}
-                toggleEn={toggleEn}
-                toggleUwt={toggleUwt}
-                del={del}
-                runAction={runAction}
-                stationOrder={stationOrder}
-                showStationNum={prefs.showStationNum}
-                programRunning={runningProgramPids.has(pid)}
-                runNowBlocked={startingProgramPid !== null}
-                stopProgramStationsPending={manualStation.isPending}
-                onProgramStop={(p) => {
-                  const row = pd[p]
-                  const label = row?.[5]?.trim() ? String(row[5]) : `Program ${p + 1}`
-                  void runAction(() => stopProgramStations(p), `Program “${label}” stopped.`)
-                }}
-                onRunNow={(pid) => {
-                  const row = pd[pid]
-                  const uwt = row ? (flagUseWeather(row[0]) ? 1 : 0) : 1
-                  setRunProgQo(2)
-                  setRunProgUwt(uwt)
-                  setRunProgramPid(pid)
-                }}
-              />
-            ))}
+          <div className={styles.switchCard}>
+            <Switch
+              checked={editor.useWeather}
+              onChange={(useWeather) => patchEditor({ useWeather })}
+              label="Use weather adjustment"
+              description="Scale durations by the watering level from your weather settings."
+            />
           </div>
-        </SortableContext>
-        <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.25, 1, 0.5, 1)' }}>
-          {activeDragId != null ? (
-            <div className={styles.dragOverlayCard}>
-              <span className={styles.dragOverlayTitle}>
-                {pd[Number(activeDragId)]?.[5] || `Program ${Number(activeDragId) + 1}`}
-              </span>
+
+          <AdvancedSection
+            id="program-editor-advanced"
+            title="Advanced scheduling"
+            description={advancedSummary(editor)}
+          >
+            <div className={styles.advGroup}>
+              <p className={styles.advLabel}>Schedule type</p>
+              <Segmented
+                label="Schedule type"
+                value={editor.dayType}
+                onChange={(dayType) => patchEditor({ dayType })}
+                options={[
+                  { value: 'weekly', label: 'Weekly' },
+                  { value: 'interval', label: 'Interval' },
+                  { value: 'single', label: 'Single run' },
+                  { value: 'monthly', label: 'Monthly' },
+                ]}
+              />
+              {editor.dayType === 'interval' ? (
+                <div className={styles.fieldPair}>
+                  <div>
+                    <Label htmlFor="int-every">Every N days</Label>
+                    <Input
+                      id="int-every"
+                      className={styles.numberInput}
+                      type="number"
+                      min={2}
+                      max={128}
+                      value={editor.intervalEvery}
+                      onChange={(e) => patchEditor({ intervalEvery: parseInt(e.target.value, 10) || 2 })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="int-start">Starting in (0 … N−1)</Label>
+                    <Input
+                      id="int-start"
+                      className={styles.numberInput}
+                      type="number"
+                      min={0}
+                      max={127}
+                      value={editor.intervalStarting}
+                      onChange={(e) => patchEditor({ intervalStarting: parseInt(e.target.value, 10) || 0 })}
+                    />
+                  </div>
+                </div>
+              ) : null}
+              {editor.dayType === 'single' ? (
+                <div>
+                  <Label htmlFor="single-date">Run date</Label>
+                  <Input
+                    id="single-date"
+                    type="date"
+                    className={styles.dateInput}
+                    value={epochDaysToIsoDate(editor.singleEpochDay)}
+                    onChange={(e) => {
+                      const ep = isoDateToEpochDays(e.target.value)
+                      if (ep !== null) patchEditor({ singleEpochDay: ep })
+                    }}
+                  />
+                </div>
+              ) : null}
+              {editor.dayType === 'monthly' ? (
+                <div>
+                  <Label htmlFor="month-day">Day of month</Label>
+                  <Input
+                    id="month-day"
+                    className={styles.numberInput}
+                    type="number"
+                    min={0}
+                    max={31}
+                    value={editor.monthlyDay}
+                    onChange={(e) => patchEditor({ monthlyDay: parseInt(e.target.value, 10) || 0 })}
+                  />
+                  <p className={styles.sectionHint}>Use 0 for the last day of the month. Needs recent firmware.</p>
+                </div>
+              ) : null}
+            </div>
+
+            <div className={styles.advGroup}>
+              <p className={styles.advLabel}>Day restriction</p>
+              <Segmented
+                label="Day restriction"
+                value={editor.restriction}
+                onChange={(restriction) => patchEditor({ restriction })}
+                options={[
+                  { value: 'none', label: 'None' },
+                  { value: 'odd', label: 'Odd days' },
+                  { value: 'even', label: 'Even days' },
+                ]}
+              />
+              <p className={styles.sectionHint}>Optional odd/even filter on top of the schedule.</p>
+            </div>
+
+            <div className={styles.advGroup}>
+              <p className={styles.advLabel}>First start reference</p>
+              <StartPickEditor
+                idPrefix="primary"
+                value={editor.primaryPick}
+                is24Hour={prefs.is24Hour}
+                showClockInput={false}
+                onChange={(primaryPick) => patchEditor({ primaryPick })}
+              />
+              <p className={styles.sectionHint}>
+                {editor.primaryPick.mode === 'clock'
+                  ? 'Clock time is set under Start time above.'
+                  : `0 = exactly at ${editor.primaryPick.mode}. Positive runs after, negative before (−720…720).`}
+              </p>
+            </div>
+
+            <div className={styles.advGroup}>
+              <p className={styles.advLabel}>Additional starts</p>
+              <Segmented
+                label="Additional start mode"
+                value={editor.startMode}
+                onChange={(startMode) => patchEditor({ startMode })}
+                options={[
+                  { value: 'repeating', label: 'Repeating' },
+                  { value: 'fixed', label: 'Fixed times' },
+                ]}
+              />
+              {editor.startMode === 'repeating' ? (
+                <div className={styles.fieldPair}>
+                  <div>
+                    <Label htmlFor="repeat-count">Repeat count</Label>
+                    <Input
+                      id="repeat-count"
+                      className={styles.numberInput}
+                      type="number"
+                      min={0}
+                      value={editor.repeatCount}
+                      onChange={(e) => patchEditor({ repeatCount: parseInt(e.target.value, 10) || 0 })}
+                    />
+                    <p className={styles.sectionHint}>0 = run only once at the first start.</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="repeat-interval">Every (minutes)</Label>
+                    <Input
+                      id="repeat-interval"
+                      className={styles.numberInput}
+                      type="number"
+                      min={1}
+                      value={editor.repeatIntervalMin}
+                      onChange={(e) =>
+                        patchEditor({ repeatIntervalMin: parseInt(e.target.value, 10) || 1 })
+                      }
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.fixedSlots}>
+                  {(
+                    [
+                      ['2', 0, editor.fixedPick1],
+                      ['3', 1, editor.fixedPick2],
+                      ['4', 2, editor.fixedPick3],
+                    ] as const
+                  ).map(([label, idx, pick]) => (
+                    <div key={label} className={styles.fixedSlot}>
+                      <Switch
+                        checked={editor.fixedSlotOn[idx]}
+                        label={`Start ${label}`}
+                        description={editor.fixedSlotOn[idx] ? undefined : 'Off'}
+                        onChange={(on) =>
+                          setEditor((s) => {
+                            if (!s) return s
+                            const next = [...s.fixedSlotOn] as [boolean, boolean, boolean]
+                            next[idx] = on
+                            return { ...s, fixedSlotOn: next }
+                          })
+                        }
+                      />
+                      {editor.fixedSlotOn[idx] ? (
+                        <StartPickEditor
+                          idPrefix={`fx-${idx}`}
+                          is24Hour={prefs.is24Hour}
+                          value={pick}
+                          onChange={(nextPick) =>
+                            setEditor((s) => {
+                              if (!s) return s
+                              if (idx === 0) return { ...s, fixedPick1: nextPick }
+                              if (idx === 1) return { ...s, fixedPick2: nextPick }
+                              return { ...s, fixedPick3: nextPick }
+                            })
+                          }
+                        />
+                      ) : null}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className={styles.advGroup}>
+              <Switch
+                checked={editor.keepDateRange}
+                onChange={(keepDateRange) => patchEditor({ keepDateRange })}
+                label="Limit to a date range"
+                description="Seasonal programs: only run between these dates each year."
+              />
+              {editor.keepDateRange ? (
+                <div className={styles.fieldPair}>
+                  <div>
+                    <Label htmlFor="dr-from">From (MM/DD)</Label>
+                    <Input
+                      id="dr-from"
+                      className={styles.numberInput}
+                      placeholder="01/01"
+                      defaultValue={formatOsDateMmDd(editor.from)}
+                      onChange={(e) => {
+                        const c = parseMmDdToOsDate(e.target.value)
+                        if (c !== null) patchEditor({ from: c })
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="dr-to">To (MM/DD)</Label>
+                    <Input
+                      id="dr-to"
+                      className={styles.numberInput}
+                      placeholder="12/31"
+                      defaultValue={formatOsDateMmDd(editor.to)}
+                      onChange={(e) => {
+                        const c = parseMmDdToOsDate(e.target.value)
+                        if (c !== null) patchEditor({ to: c })
+                      }}
+                    />
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </AdvancedSection>
+
+          {editor.pid >= 0 ? (
+            <div className={styles.dangerZone}>
+              <div className={styles.dangerText}>
+                <span className={styles.dangerTitle}>Delete this program</span>
+                <span className={styles.sectionHint}>Removes it from the controller. Cannot be undone.</span>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="danger"
+                startIcon={<Trash2 size={15} aria-hidden />}
+                disabled={del.isPending}
+                onClick={async () => {
+                  if (window.confirm(`Delete "${editor.name || `Program ${editor.pid + 1}`}"?`)) {
+                    const ok = await runAction(() => del.mutateAsync(editor.pid), 'Program deleted.')
+                    if (ok) setEditor(null)
+                  }
+                }}
+              >
+                Delete
+              </Button>
             </div>
           ) : null}
-        </DragOverlay>
-      </DndContext>
-    </div>
+        </Sheet>
+      ) : null}
+    </>
   )
 }

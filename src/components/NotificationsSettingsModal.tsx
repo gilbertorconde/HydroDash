@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X } from 'lucide-react'
+import { Bell, Send, X } from 'lucide-react'
 import {
   DEFAULT_SERVICE_ENABLED,
   defaultSettingsJson,
@@ -9,7 +9,7 @@ import {
   type NotificationServiceKey,
   type NotificationSettingsJson,
 } from '../server/notifications/types'
-import { Button, ErrorBox, Input, Label } from './ui'
+import { Button, ErrorBox, Field, Input, Switch } from './ui'
 import { useNotificationsSaveSettings, useNotificationsTest } from '../api/hooks'
 import styles from './NotificationsSettingsModal.module.css'
 
@@ -50,21 +50,25 @@ export function NotificationsSettingsModal({ onClose, initial, pushConfigured }:
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.dialogHeader}>
-          <h2 id="notifications-settings-title" className={styles.dialogTitle}>
-            Notifications
-          </h2>
+          <span className={styles.headerIcon} aria-hidden>
+            <Bell size={18} />
+          </span>
+          <div className={styles.headerText}>
+            <h2 id="notifications-settings-title" className={styles.dialogTitle}>
+              Push notifications
+            </h2>
+            <p className={styles.dialogSubtitle}>HydroDash alerts for this server (inbox + ntfy push)</p>
+          </div>
           <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close">
             <X size={20} aria-hidden />
           </button>
         </div>
         <div className={styles.dialogBody}>
-          <p className={styles.hint}>
-            Requires MariaDB (<code>DATABASE_URL</code>) and the <code>hydrodash-notify</code> service for polling.
-            Set <code>NTFY_SERVER_URL</code> for push.
-          </p>
-
-          <div className={styles.field}>
-            <Label htmlFor="ntfy-default-topic">Default ntfy topic</Label>
+          <Field
+            label="Default ntfy topic"
+            htmlFor="ntfy-default-topic"
+            hint="Subscribe to this topic in the ntfy app to get pushes on your phone."
+          >
             <Input
               id="ntfy-default-topic"
               value={settings.defaultTopic}
@@ -72,42 +76,41 @@ export function NotificationsSettingsModal({ onClose, initial, pushConfigured }:
               placeholder="hydrodash"
               autoComplete="off"
             />
-          </div>
+          </Field>
 
-          <div className={styles.field}>
-            <span className={styles.fieldLabel}>Notify when</span>
+          <section className={styles.group} aria-labelledby="notify-when-title">
+            <h3 id="notify-when-title" className={styles.groupTitle}>
+              Notify when
+            </h3>
             <div className={styles.serviceList}>
               {NOTIFICATION_SERVICE_KEYS.map((key) => (
-                <label key={key} className={styles.serviceRow}>
-                  <input
-                    type="checkbox"
-                    checked={serviceEnabledLocal(settings, key)}
-                    onChange={(e) => toggleService(key, e.target.checked)}
-                  />
-                  <span>
-                    {NOTIFICATION_SERVICE_LABELS[key]}{' '}
-                    <span className={styles.serviceKey}>({key})</span>
-                  </span>
-                </label>
+                <Switch
+                  key={key}
+                  checked={serviceEnabledLocal(settings, key)}
+                  onChange={(on) => toggleService(key, on)}
+                  label={NOTIFICATION_SERVICE_LABELS[key]}
+                />
               ))}
             </div>
-          </div>
+          </section>
 
           <div className={styles.testBlock}>
             <div className={styles.testCopy}>
-              <span className={styles.fieldLabel}>Try it</span>
+              <span className={styles.testTitle}>Try it</span>
               <p className={styles.testHint}>
-                Inserts a test row in the inbox
-                {pushConfigured ? ' and sends your default ntfy topic.' : ' (push requires NTFY_SERVER_URL on the server).'}
+                Adds a test message to the inbox
+                {pushConfigured ? ' and pushes it to your default ntfy topic.' : ' (push needs NTFY_SERVER_URL on the server).'}
               </p>
             </div>
             <Button
               type="button"
               variant="secondary"
+              size="sm"
+              startIcon={<Send size={15} aria-hidden />}
               disabled={testNotify.isPending}
               onClick={() => testNotify.mutate()}
             >
-              {testNotify.isPending ? 'Sending…' : 'Send test notification'}
+              {testNotify.isPending ? 'Sending…' : 'Send test'}
             </Button>
           </div>
           {testNotify.isError ? (
@@ -129,22 +132,26 @@ export function NotificationsSettingsModal({ onClose, initial, pushConfigured }:
             <ErrorBox message={save.error instanceof Error ? save.error.message : 'Save failed'} />
           ) : null}
 
-          <div className={styles.actions}>
-            <Button variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              disabled={save.isPending}
-              onClick={() =>
-                save.mutate(settings, {
-                  onSuccess: () => onClose(),
-                })
-              }
-            >
-              Save
-            </Button>
-          </div>
+          <p className={styles.hint}>
+            Needs MariaDB (<code>DATABASE_URL</code>) and the <code>hydrodash-notify</code> service for polling;
+            set <code>NTFY_SERVER_URL</code> for phone push.
+          </p>
+        </div>
+        <div className={styles.actions}>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            disabled={save.isPending}
+            onClick={() =>
+              save.mutate(settings, {
+                onSuccess: () => onClose(),
+              })
+            }
+          >
+            {save.isPending ? 'Saving…' : 'Save'}
+          </Button>
         </div>
       </div>
     </div>

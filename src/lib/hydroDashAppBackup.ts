@@ -29,6 +29,7 @@ const PREF_KEYS: Record<keyof AppPreferences, string> = {
   sortByStationName: 'os_app_sortByStationName',
   showDisabled: 'showDisabled',
   showStationNum: 'showStationNum',
+  showAdvanced: 'hydrodash.showAdvanced',
 }
 
 const EVT_PREFS = 'os-app-prefs-changed'
@@ -97,6 +98,7 @@ export function parseHydroDashAppBackup(raw: unknown): HydroDashAppBackupV1 {
       sortByStationName: readBool('sortByStationName'),
       showDisabled: readBool('showDisabled'),
       showStationNum: readBool('showStationNum'),
+      showAdvanced: readBool('showAdvanced'),
     },
     theme:
       o.theme === 'light' || o.theme === 'dark' || o.theme === 'system'

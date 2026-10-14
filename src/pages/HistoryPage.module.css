@@ -1,79 +1,72 @@
-.wrap {
-  display: grid;
-  gap: var(--space-md);
+/* —— Hero stats —— */
+.heroStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-md);
 }
 
-.title {
-  margin: 0;
-  font-size: var(--text-title);
+.heroStat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 8.5rem;
+  padding: 0.6rem 1rem 0.7rem;
+  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+}
+
+.heroStatLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--hero-muted);
+}
+
+.heroStatValue {
+  font-size: 1.6rem;
   font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 
-.lead {
-  margin: 0;
-  color: var(--color-muted);
-  font-size: var(--text-body);
-  line-height: 1.5;
-  max-width: 44rem;
+/* —— Controls card (view toggle + compact range summary) —— */
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: 0.75rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
 }
 
-.toolbar {
+.controlsRow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem 0.75rem;
+  gap: var(--space-xs) var(--space-sm);
 }
 
-.toolbarActions {
+.rangeSummary {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
+  min-width: 0;
+  flex: 1 1 14rem;
+  justify-content: flex-end;
 }
 
-.viewToggle {
-  display: inline-flex;
-  gap: 0;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
-  overflow: hidden;
-  width: fit-content;
-}
-
-.segBtn,
-.segActive {
-  padding: 0.45rem 1.1rem;
-  font-size: 0.85rem;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-  background: color-mix(in srgb, var(--color-surface-2) 50%, var(--color-elevated));
-  color: var(--color-text);
-}
-
-.segActive {
-  background: color-mix(in srgb, var(--color-accent) 28%, var(--color-elevated));
-  color: var(--color-text);
-}
-
-.segBtn:hover {
-  filter: brightness(1.06);
-}
-
-.options {
-  border: 1px solid color-mix(in srgb, var(--color-border) 80%, transparent);
-  border-radius: 12px;
-  background: var(--panel-2);
-  padding: 0;
-}
-
-/* Compact "Oct 8 – Oct 14 · by day" row; phones only (desktop always shows the full options). */
-.optionsSummaryRow {
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.4rem 0.5rem 0.4rem 0.9rem;
+.rangeIcon {
+  flex-shrink: 0;
+  color: var(--color-accent);
 }
 
 .optionsSummaryText {
@@ -87,26 +80,34 @@
 
 .optionsToggle {
   flex-shrink: 0;
+  color: var(--color-accent);
+  min-height: 2.5rem;
 }
 
 .optionsBody {
-  padding: 0.9rem;
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0.35rem 0.25rem;
+  border-top: 1px solid var(--color-border);
 }
 
 @media (max-width: 640px) {
-  .optionsSummaryRow {
+  .controlsRow > :first-child {
+    flex: 1 1 100%;
     display: flex;
   }
 
-  .optionsBody {
-    display: none;
-    padding-top: 0.35rem;
+  .controlsRow > :first-child > * {
+    flex: 1;
   }
 
-  .optionsBodyOpen {
-    display: grid;
+  .rangeSummary {
+    justify-content: space-between;
+    padding-left: 0.35rem;
+  }
+
+  .optionsSummaryText {
+    flex: 1;
   }
 }
 
@@ -114,121 +115,114 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem 0.75rem;
+  gap: var(--space-xs) var(--space-sm);
 }
 
 .groupingLabel {
-  font-size: 0.82rem;
+  font-size: var(--text-small);
   font-weight: 700;
   color: var(--color-muted);
 }
 
-.segment {
-  display: inline-flex;
-  border-radius: 8px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
-  overflow: hidden;
-}
-
 .timelineHint {
-  margin: 0;
-  font-size: 0.82rem;
+  font-size: var(--text-small);
   color: var(--color-muted);
   line-height: 1.45;
 }
 
-.row {
+.dateRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 0 var(--space-sm);
   align-items: flex-end;
 }
 
-.field {
-  min-width: 180px;
-  flex: 1;
+.dateField {
+  flex: 1 1 10rem;
+  margin-bottom: 0;
 }
 
-.actions {
-  display: flex;
-  gap: 8px;
+.refreshBtn {
+  min-height: 2.75rem;
+}
+
+@media (max-width: 640px) {
+  .dateRow {
+    gap: var(--space-sm);
+  }
+
+  .refreshBtn {
+    flex: 1 1 100%;
+  }
 }
 
 .ok {
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius-md);
+  background: var(--color-success-soft);
   color: var(--color-success);
-  margin: 0;
-}
-
-.summaryBar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem 1.5rem;
-  padding: 0.55rem 0.85rem;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
-  background: color-mix(in srgb, var(--color-surface-2) 35%, var(--color-elevated));
-  font-size: 0.88rem;
-}
-
-.summaryBar strong {
-  font-weight: 800;
+  font-weight: 650;
+  font-size: var(--text-small);
 }
 
 .muted {
-  opacity: 0.8;
-  margin: 0;
+  color: var(--color-muted);
   font-size: 0.9rem;
 }
 
-.cardBodyFlush {
-  padding-top: 0.25rem !important;
+.loading {
+  display: grid;
+  place-items: center;
+  padding: var(--space-xl) 0;
 }
 
 /* —— Timeline —— */
 .timelineWrap {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-xs);
 }
 
 .axisTop {
   display: flex;
   justify-content: space-between;
+  gap: var(--space-sm);
   font-size: 0.72rem;
   font-weight: 650;
   color: var(--color-muted);
-  padding: 0 0.15rem;
 }
 
 .timelineGrid {
   display: grid;
-  grid-template-columns: minmax(6.5rem, 9rem) 1fr;
-  gap: 0.35rem 0.5rem;
+  grid-template-columns: minmax(6.5rem, 9rem) minmax(0, 1fr);
+  gap: 0 var(--space-xs);
   align-items: stretch;
 }
 
 .timelineLabels {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  font-size: 0.78rem;
-  font-weight: 650;
-  color: var(--color-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding-top: 1px;
 }
 
 .timelineLabelRow {
-  min-height: 2.1rem;
+  height: 2.4rem;
   display: flex;
   align-items: center;
   padding-right: 0.25rem;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-bottom: 1px solid transparent;
 }
 
 .timelineScroll {
   overflow-x: auto;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
-  background: color-mix(in srgb, var(--color-surface-2) 45%, var(--color-elevated));
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-elevated);
 }
 
 .timelineInner {
@@ -249,10 +243,8 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 1px;
-  margin-left: -0.5px;
-  background: color-mix(in srgb, var(--color-border) 70%, transparent);
-  opacity: 0.85;
+  width: 0;
+  border-left: 1px dashed var(--color-border-strong);
 }
 
 .nowLine {
@@ -261,16 +253,16 @@
   bottom: 0;
   width: 2px;
   margin-left: -1px;
-  background: #e63946;
-  box-shadow: 0 0 0 1px color-mix(in srgb, #e63946 35%, transparent);
+  background: var(--color-danger);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-danger) 25%, transparent);
   z-index: 3;
 }
 
 .timelineTrack {
   position: relative;
-  height: 2.1rem;
+  height: 2.4rem;
   flex-shrink: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 45%, transparent);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .timelineTrack:last-child {
@@ -279,36 +271,68 @@
 
 .timelineBlock {
   position: absolute;
-  top: 0.2rem;
-  bottom: 0.2rem;
+  top: 0.45rem;
+  bottom: 0.45rem;
+  border-radius: 6px;
+  min-width: 4px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+}
+
+.legend {
+  list-style: none;
+  margin: var(--space-2xs) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--color-muted);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legendSwatch {
+  width: 0.8rem;
+  height: 0.8rem;
   border-radius: 4px;
-  opacity: 0.9;
-  min-width: 2px;
+}
+
+.legendNow {
+  width: 2px;
+  height: 0.9rem;
+  background: var(--color-danger);
 }
 
 /* —— Table —— */
 .tableView {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-xs);
 }
 
 .group {
-  border: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
-  border-radius: 10px;
-  background: var(--panel-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
   overflow: hidden;
+}
+
+.group[open] {
+  background: var(--color-elevated);
 }
 
 .groupSummary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.55rem 0.65rem;
+  gap: var(--space-xs);
+  min-height: 3rem;
+  padding: 0.35rem 0.4rem 0.35rem 0.8rem;
   cursor: pointer;
-  font-weight: 700;
-  font-size: 0.88rem;
   list-style: none;
 }
 
@@ -316,53 +340,201 @@
   display: none;
 }
 
+.groupChevron {
+  flex-shrink: 0;
+  color: var(--color-muted);
+  transform: rotate(-90deg);
+  transition: transform 0.16s ease;
+}
+
+.group[open] .groupChevron {
+  transform: none;
+}
+
 .groupTitle {
   flex: 1;
   min-width: 0;
+  font-weight: 750;
+  font-size: 0.92rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+.groupMeta {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subtle trash button: muted until hovered, always confirmed. */
 .groupDelete {
   flex-shrink: 0;
-  padding: 0.25rem 0.55rem !important;
-  font-size: 0.75rem !important;
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition:
+    color 0.14s ease,
+    background-color 0.14s ease;
+}
+
+.groupDelete:hover:not(:disabled),
+.groupDelete:focus-visible {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.groupDelete:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .tableScroll {
   overflow-x: auto;
-  border-top: 1px solid color-mix(in srgb, var(--color-border) 65%, transparent);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border);
 }
 
 .dataTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
 }
 
 .dataTable th,
 .dataTable td {
-  padding: 0.45rem 0.65rem;
+  padding: 0.6rem 0.8rem;
   text-align: left;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
 }
 
 .dataTable th {
-  font-weight: 750;
+  font-weight: 800;
   color: var(--color-muted);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.06em;
 }
 
 .dataTable tbody tr:last-child td {
   border-bottom: none;
 }
 
+.dataTable tbody tr:hover td {
+  background: var(--color-elevated);
+}
+
 .dataTable td {
   font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 520px) {
+.cellMain {
+  font-weight: 700;
+}
+
+.cellRuntime {
+  font-weight: 700;
+  color: var(--color-accent);
+}
+
+.cellFlow[data-empty] {
+  color: var(--color-muted);
+}
+
+.programDot {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  vertical-align: 0.05em;
+}
+
+.flowLabel,
+.inlineEnd {
+  display: none;
+}
+
+/* Phones: each run becomes a two-line row (name · runtime / start – end · flow) instead of a wide table. */
+@media (max-width: 640px) {
+  .dataTable thead {
+    display: none;
+  }
+
+  .dataTable tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'main runtime'
+      'times flow';
+    column-gap: var(--space-sm);
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .dataTable tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .dataTable td {
+    padding: 0;
+    border: 0;
+    background: transparent !important;
+  }
+
+  .cellMain {
+    grid-area: main;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cellRuntime {
+    grid-area: runtime;
+    text-align: right;
+  }
+
+  /* Start and end share the second line: "06:00:00 – 06:10:00". */
+  .dataTable .cellStart {
+    grid-area: times;
+    font-size: 0.78rem;
+    color: var(--color-muted);
+    padding-left: 1.05rem;
+  }
+
+  .cellEnd {
+    display: none;
+  }
+
+  .inlineEnd {
+    display: inline;
+  }
+
+  .cellFlow {
+    grid-area: flow;
+    text-align: right;
+    font-size: 0.78rem;
+    color: var(--color-muted);
+  }
+
+  .flowLabel {
+    display: inline;
+  }
+
+  /* No flow sensor reading: drop the placeholder on phones. */
+  .cellFlow[data-empty] {
+    visibility: hidden;
+  }
+
   .timelineGrid {
-    grid-template-columns: minmax(5rem, 7rem) 1fr;
+    grid-template-columns: minmax(5rem, 6.5rem) minmax(0, 1fr);
   }
 }

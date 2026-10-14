@@ -172,11 +172,11 @@ export function formatDurationShort(sec: number): string {
   return rm ? `${h}h ${rm}m` : `${h}h`
 }
 
-/** Calendar day key in local timezone */
+/** Calendar day key on the controller's clock (its epochs are local wall time encoded as UTC). */
 export function localDayKey(epochSec: number): string {
   const d = new Date(epochSec * 1000)
-  const y = d.getFullYear()
-  const mo = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
+  const y = d.getUTCFullYear()
+  const mo = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
   return `${y}-${mo}-${day}`
 }
