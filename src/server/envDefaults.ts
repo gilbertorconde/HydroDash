@@ -6,6 +6,8 @@
 export const DEFAULT_NOTIFICATIONS_POLL_INTERVAL_SEC = 45
 export const DEFAULT_NOTIFICATIONS_RETENTION_DAYS = 90
 export const DEFAULT_NOTIFICATIONS_HEALTH_PORT = 8081
+export const DEFAULT_NOTIFICATIONS_FETCH_TIMEOUT_SEC = 10
+export const DEFAULT_NOTIFICATIONS_OFFLINE_ALERT_MIN = 10
 
 export function getNotificationsPollIntervalSec(): number {
   const raw = process.env.NOTIFICATIONS_POLL_INTERVAL_SEC
@@ -19,6 +21,21 @@ export function getNotificationsRetentionDays(): number {
   if (raw === undefined || String(raw).trim() === '') return DEFAULT_NOTIFICATIONS_RETENTION_DAYS
   const n = Number(raw)
   return Math.max(7, Number.isFinite(n) ? n : DEFAULT_NOTIFICATIONS_RETENTION_DAYS)
+}
+
+export function getNotificationsFetchTimeoutSec(): number {
+  const raw = process.env.NOTIFICATIONS_FETCH_TIMEOUT_SEC
+  if (raw === undefined || String(raw).trim() === '') return DEFAULT_NOTIFICATIONS_FETCH_TIMEOUT_SEC
+  const n = Number(raw)
+  return Math.max(2, Number.isFinite(n) ? n : DEFAULT_NOTIFICATIONS_FETCH_TIMEOUT_SEC)
+}
+
+/** Minutes without a successful poll before alerting; also the age after which a snapshot is too stale to diff. */
+export function getNotificationsOfflineAlertMin(): number {
+  const raw = process.env.NOTIFICATIONS_OFFLINE_ALERT_MIN
+  if (raw === undefined || String(raw).trim() === '') return DEFAULT_NOTIFICATIONS_OFFLINE_ALERT_MIN
+  const n = Number(raw)
+  return Math.max(1, Number.isFinite(n) ? n : DEFAULT_NOTIFICATIONS_OFFLINE_ALERT_MIN)
 }
 
 export function getNotificationsHealthPort(): number {

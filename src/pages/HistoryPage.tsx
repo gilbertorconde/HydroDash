@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useClearAllLogs, useDeleteLog, useJsonAll, useLogs } from '../api/hooks'
 import type { JsonAll } from '../api/types'
-import { Button, Card, ErrorBox, Input, Label, Spinner } from '../components/ui'
+import { Button, Card, ErrorBox, Input, Label, OverflowMenu, Spinner } from '../components/ui'
 import { formatEpochTimeHmsLocale, formatEpochSecondsLocale } from '../lib/formatLocale'
 import { useAppPreferences } from '../lib/appPreferences'
 import {
@@ -66,6 +66,16 @@ function downloadJson(filename: string, data: unknown) {
   URL.revokeObjectURL(url)
 }
 
+/** Short "Oct 8" label for a date input value; adds the year when it isn't the current one. */
+function formatShortDate(value: string): string {
+  const [y, m, d] = value.split('-').map(Number)
+  if (!y || !m || !d) return value || '—'
+  const dt = new Date(y, m - 1, d)
+  const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
+  if (y !== new Date().getFullYear()) opts.year = 'numeric'
+  return dt.toLocaleDateString(undefined, opts)
+}
+
 function formatDayHeading(dayKey: string): string {
   const [y, m, d] = dayKey.split('-').map(Number)
   const dt = new Date(y!, (m ?? 1) - 1, d)
@@ -90,6 +100,8 @@ export function HistoryPage() {
   const [toDate, setToDate] = useState(initialDates.defaultTo)
   const [view, setView] = useState<'timeline' | 'table'>('table')
   const [tableGroup, setTableGroup] = useState<'day' | 'station'>('day')
+  /** Phones only: the options panel collapses to a one-line summary until "Change" is tapped. */
+  const [optionsOpen, setOptionsOpen] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
@@ -184,6 +196,10 @@ export function HistoryPage() {
     downloadJson(`opensprinkler-logs_${fromDate}_${toDate}.json`, rawEntries)
   }
 
+  const optionsSummary = `${formatShortDate(fromDate)} – ${formatShortDate(toDate)} · ${
+    view === 'timeline' ? 'timeline' : `by ${tableGroup}`
+  }`
+
   const runClearAll = async () => {
     setErr(null)
     setMsg(null)
@@ -215,30 +231,63 @@ export function HistoryPage() {
       <h1 className={styles.title}>History</h1>
       <p className={styles.lead}>Irrigation log from the controller. Switch between table and timeline.</p>
 
-      <div className={styles.viewToggle} role="tablist" aria-label="Log view">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={view === 'table'}
-          className={view === 'table' ? styles.segActive : styles.segBtn}
-          onClick={() => setView('table')}
-        >
-          Table
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={view === 'timeline'}
-          className={view === 'timeline' ? styles.segActive : styles.segBtn}
-          onClick={() => setView('timeline')}
-        >
-          Timeline
-        </button>
+      <div className={styles.toolbar}>
+        <div className={styles.viewToggle} role="tablist" aria-label="Log view">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'table'}
+            className={view === 'table' ? styles.segActive : styles.segBtn}
+            onClick={() => setView('table')}
+          >
+            Table
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={view === 'timeline'}
+            className={view === 'timeline' ? styles.segActive : styles.segBtn}
+            onClick={() => setView('timeline')}
+          >
+            Timeline
+          </button>
+        </div>
+        <div className={styles.toolbarActions}>
+          <Button type="button" variant="secondary" onClick={runExport} disabled={rawEntries.length === 0}>
+            Export
+          </Button>
+          <OverflowMenu
+            label="More history actions"
+            items={[
+              {
+                label: 'Clear all logs…',
+                danger: true,
+                disabled: clearAllLogs.isPending,
+                onSelect: () => void runClearAll(),
+              },
+            ]}
+          />
+        </div>
       </div>
 
-      <details open className={styles.options}>
-        <summary className={styles.optionsSummary}>Options</summary>
-        <div className={styles.optionsBody}>
+      <section className={styles.options} aria-label="Log options">
+        <div className={styles.optionsSummaryRow}>
+          <span className={styles.optionsSummaryText}>{optionsSummary}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            className={styles.optionsToggle}
+            aria-expanded={optionsOpen}
+            aria-controls="history-options"
+            onClick={() => setOptionsOpen((o) => !o)}
+          >
+            {optionsOpen ? 'Done' : 'Change'}
+          </Button>
+        </div>
+        <div
+          id="history-options"
+          className={optionsOpen ? `${styles.optionsBody} ${styles.optionsBodyOpen}` : styles.optionsBody}
+        >
           {view === 'table' ? (
             <div className={styles.groupingRow}>
               <span className={styles.groupingLabel}>Grouping</span>
@@ -278,23 +327,8 @@ export function HistoryPage() {
               </Button>
             </div>
           </div>
-
-          <div className={styles.actionStack}>
-            <Button type="button" variant="secondary" className={styles.fullBtn} onClick={runExport} disabled={rawEntries.length === 0}>
-              Export
-            </Button>
-            <Button
-              type="button"
-              variant="danger"
-              className={styles.fullBtn}
-              onClick={runClearAll}
-              disabled={clearAllLogs.isPending}
-            >
-              Clear logs
-            </Button>
-          </div>
         </div>
-      </details>
+      </section>
 
       {!validRange ? <ErrorBox message="Date range is invalid. End must be on or after start." /> : null}
       {err ? <ErrorBox message={err} /> : null}

@@ -26,12 +26,20 @@ type Fields = { h: string; m: string; s: string }
 
 type DurationInputProps = {
   idBase: string
+  /** Accessible name for the H/M/S group (e.g. "Run duration for Lawn"). */
+  label?: string
   valueSeconds: number
   maxSeconds?: number
   onChange: (seconds: number) => void
 }
 
-export function DurationInput({ idBase, valueSeconds, maxSeconds = 64800, onChange }: DurationInputProps) {
+export function DurationInput({
+  idBase,
+  label = 'Duration',
+  valueSeconds,
+  maxSeconds = 64800,
+  onChange,
+}: DurationInputProps) {
   const maxH = Math.floor(maxSeconds / 3600)
   const valueRef = useRef(valueSeconds)
   useLayoutEffect(() => {
@@ -85,7 +93,7 @@ export function DurationInput({ idBase, valueSeconds, maxSeconds = 64800, onChan
   }
 
   return (
-    <div className={styles.wrap}>
+    <div className={styles.wrap} role="group" aria-label={label}>
       <div className={styles.grid}>
         <div className={styles.cell}>
           <label className={styles.cellLabel} htmlFor={`${idBase}-h`}>

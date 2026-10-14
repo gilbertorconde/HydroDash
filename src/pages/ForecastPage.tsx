@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { useController, useChangeOptions } from '../api/hooks'
+import { useController, useChangeOptions, useJsonAll } from '../api/hooks'
+import { ADJUSTMENT_METHODS } from '../lib/opensprinklerOptions'
 import {
   WEATHER_PROVIDERS,
   describeWeatherError,
@@ -49,6 +50,7 @@ function renderWtdata(wt: unknown): ReactNode {
 
 export function ForecastPage() {
   const jc = useController(8000)
+  const ja = useJsonAll()
   const co = useChangeOptions()
   const prefs = useAppPreferences()
 
@@ -98,15 +100,53 @@ export function ForecastPage() {
   const wterrLabel = describeWeatherError(wterr)
   const loc = jc.data?.loc
 
+  // Summary values: watering level and method come from options (/ja), status from /jc.
+  const opts = ja.data?.options
+  const wl = typeof opts?.wl === 'number' ? opts.wl : null
+  // Low 7 bits select the method; bit 7 is the weather-restriction flag on newer firmware.
+  const uwt = typeof opts?.uwt === 'number' ? opts.uwt & 0x7f : null
+  const methodName =
+    uwt == null ? null : (ADJUSTMENT_METHODS.find((m) => m.id === uwt)?.name ?? `Method ${uwt}`)
+  const statusOk = wterr === 0
+  const statusLabel =
+    typeof wterr !== 'number' ? '—' : statusOk ? 'OK' : (wterrLabel ?? `Error ${wterr}`)
+
   return (
-    <MoreSubpageLayout title="Weather & forecast">
+    <MoreSubpageLayout title="Weather">
       <p className={shell.lead}>
-        Provider and API keys are saved on the device (form below). Live readings appear only after the
-        controller successfully calls your <strong>weather service URL</strong> and receives usable data, not from
-        configuration alone.
+        How weather affects watering on this controller. Readings appear after the controller successfully
+        contacts its weather service.
       </p>
       {err ? <ErrorBox message={err} /> : null}
       {msg ? <p className={styles.ok}>{msg}</p> : null}
+
+      <div className={styles.summary}>
+        <div className={styles.stat}>
+          <span className={styles.statLabel}>Watering level</span>
+          <span className={styles.statValue}>{wl != null ? `${wl}%` : '—'}</span>
+        </div>
+        <div className={styles.stat}>
+          <span className={styles.statLabel}>Adjustment</span>
+          <span className={styles.statValue}>{methodName ?? '—'}</span>
+        </div>
+        <div className={styles.stat}>
+          <span className={styles.statLabel}>Last successful check</span>
+          <span className={styles.statValueSm}>{formatUnixSec(jc.data?.lswc)}</span>
+        </div>
+        <div className={styles.stat}>
+          <span className={styles.statLabel}>Status</span>
+          <span
+            className={[
+              styles.statValueSm,
+              typeof wterr === 'number' ? (statusOk ? styles.statusOk : styles.statusErr) : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            {statusLabel}
+          </span>
+        </div>
+      </div>
 
       <Card title="Live controller data">
         {jc.isLoading && !jc.data ? <Spinner /> : null}
@@ -139,9 +179,12 @@ export function ForecastPage() {
           </dd>
           <dt>Weather restricted</dt>
           <dd>{jc.data?.wtrestr != null ? String(jc.data.wtrestr) : '—'}</dd>
-          <dt>Live weather payload</dt>
-          <dd>{renderWtdata(wtdata)}</dd>
         </dl>
+        <details className={styles.tech}>
+          <summary className={styles.techSummary}>Technical details</summary>
+          <p className={styles.techLabel}>Live weather payload</p>
+          {renderWtdata(wtdata)}
+        </details>
       </Card>
 
       <Card title="Weather provider">

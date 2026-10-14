@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { MoreHorizontal } from 'lucide-react'
 import styles from './ui.module.css'
 
 export function Card({
@@ -84,4 +85,67 @@ export function ErrorBox({ message }: { message: string }) {
 
 export function Spinner() {
   return <span className={styles.spinner} aria-label="Loading" />
+}
+
+export type OverflowMenuItem = {
+  label: string
+  onSelect: () => void
+  danger?: boolean
+  disabled?: boolean
+}
+
+/** "⋯" button with a small popover of secondary / destructive actions. */
+export function OverflowMenu({ items, label = 'More actions' }: { items: OverflowMenuItem[]; label?: string }) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  return (
+    <div className={styles.menuWrap} ref={wrapRef}>
+      <button
+        type="button"
+        className={styles.menuTrigger}
+        aria-label={label}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <MoreHorizontal size={18} aria-hidden />
+      </button>
+      {open ? (
+        <div className={styles.menu} role="menu">
+          {items.map((it) => (
+            <button
+              key={it.label}
+              type="button"
+              role="menuitem"
+              disabled={it.disabled}
+              className={[styles.menuItem, it.danger ? styles.menuItem_danger : ''].filter(Boolean).join(' ')}
+              onClick={() => {
+                setOpen(false)
+                it.onSelect()
+              }}
+            >
+              {it.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
 }

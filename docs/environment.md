@@ -100,8 +100,10 @@ Compose passes the same composed `DATABASE_*`, OpenSprinkler variables, and **`N
 | `NTFY_ACCESS_TOKEN` | No | Bearer token for private ntfy servers. |
 | `NOTIFICATIONS_POLL_INTERVAL_SEC` | No | Seconds between poll ticks (minimum `5`). **Default in code:** `45`. |
 | `NOTIFICATIONS_RETENTION_DAYS` | No | Delete events older than this many days (minimum `7`). **Default in code:** `90`. |
+| `NOTIFICATIONS_FETCH_TIMEOUT_SEC` | No | Per-request timeout for OpenSprinkler calls (minimum `2`); failed requests are retried once. **Default in code:** `10`. |
+| `NOTIFICATIONS_OFFLINE_ALERT_MIN` | No | Minutes without a successful poll before a *Controller unreachable* notification (minimum `1`, and never less than 3 poll intervals). When the controller comes back after at least this long, a *Controller reachable again* notification is sent and the stale snapshot is not diffed, so no late start/stop events are pushed. **Default in code:** `10`. |
 | `NOTIFICATIONS_HEALTH_PORT` | No | TCP port for `GET /health` inside the container. **Default in code:** `8081`. |
-| `NOTIFICATIONS_HEALTH_DISABLE` | No | Set to `1` to disable the health HTTP listener. **Default in code:** health server on. |
+| `NOTIFICATIONS_HEALTH_DISABLE` | No | Set to `1` to disable the health HTTP listener. **Default in code:** health server on. `GET /health` returns `503` when the poll loop has not completed a tick within 3 poll intervals + 2 min. |
 
 ---
 
@@ -130,6 +132,8 @@ These apply **only when the variable is unset or empty** (Compose does not need 
 | `VITE_OPENSPLINKER_BASE_URL` (client) | `/api/os` (`DEFAULT_VITE_OPENSPLINKER_BASE_URL` in `src/lib/envDefaults.ts`) |
 | `NOTIFICATIONS_POLL_INTERVAL_SEC` | `45` (min `5`); see `src/server/envDefaults.ts` |
 | `NOTIFICATIONS_RETENTION_DAYS` | `90` (min `7`); see `src/server/envDefaults.ts` |
+| `NOTIFICATIONS_FETCH_TIMEOUT_SEC` | `10` (min `2`); see `src/server/envDefaults.ts` |
+| `NOTIFICATIONS_OFFLINE_ALERT_MIN` | `10` (min `1`); see `src/server/envDefaults.ts` |
 | `NOTIFICATIONS_HEALTH_PORT` | `8081`; see `src/server/envDefaults.ts` |
 | `NOTIFICATIONS_HEALTH_DISABLE` | health on unless value is `1` |
 | `NOTIFICATIONS_ENABLED` | worker runs unless value is `0` |

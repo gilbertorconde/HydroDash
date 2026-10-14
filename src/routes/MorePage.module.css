@@ -1,107 +1,124 @@
+.page {
+  max-width: 40rem;
+}
+
 .title {
   font-size: var(--text-title);
-  margin: 0 0 var(--space-xs);
+  margin: 0 0 var(--space-md);
   font-weight: 800;
 }
 
-.subtitle {
+/* Grouped list of whole-row links (settings-app style). */
+.list {
+  list-style: none;
   margin: 0 0 var(--space-lg);
-  color: var(--color-muted);
-  font-size: var(--text-body);
-  line-height: 1.5;
-  max-width: 36rem;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
-  gap: var(--space-md);
-  margin-bottom: var(--space-xl);
-  align-items: stretch;
+.list > li + li {
+  border-top: 1px solid color-mix(in srgb, var(--color-border) 75%, transparent);
 }
 
-.cardLink {
-  text-decoration: none;
-  color: inherit;
+.row {
   display: flex;
-  min-height: 100%;
-  border-radius: calc(var(--radius-md) + 3px);
-  cursor: pointer;
-}
-
-.cardLink:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-accent, var(--color-cta)) 55%, transparent);
-  outline-offset: 3px;
-}
-
-.cardLink:hover .tileCta {
-  text-decoration: underline;
-}
-
-.cardLink .tileCard {
-  margin-bottom: 0;
-}
-
-.tileShell {
-  display: flex;
-  min-height: 100%;
-}
-
-.tileShell .tileCard {
-  margin-bottom: 0;
-}
-
-.tileCard {
-  flex: 1;
+  align-items: center;
+  gap: var(--space-sm);
   width: 100%;
-  min-height: 7.25rem;
-  display: flex;
-  flex-direction: column;
+  min-height: 3.6rem;
+  padding: 0.6rem 0.85rem;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.12s ease;
 }
 
-.tileCardMuted {
-  opacity: 0.92;
+a.row:hover,
+button.row:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-elevated) 70%, var(--color-surface));
 }
 
-.tileBody {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
+.row:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 55%, transparent);
+  outline-offset: -2px;
 }
 
-.cardDesc {
-  margin: 0;
-  font-size: 0.86rem;
-  line-height: 1.45;
-  color: var(--color-muted);
-  font-weight: 550;
+.row:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
-.tileMeta {
-  margin-top: auto;
+.rowMuted {
+  cursor: default;
+}
+
+.rowMuted .rowTitle,
+.rowMuted .rowIcon {
+  opacity: 0.7;
+}
+
+.rowIcon {
+  flex-shrink: 0;
+  width: 2.1rem;
+  height: 2.1rem;
   display: inline-flex;
   align-items: center;
-  gap: 0.15rem;
-  font-size: 0.82rem;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.rowText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.rowTitle {
+  font-size: 0.95rem;
   font-weight: 750;
-  color: color-mix(in srgb, var(--color-accent, var(--color-cta)) 82%, var(--color-text));
-  padding-top: 0.4rem;
+  line-height: 1.25;
 }
 
-.tileMetaStatic {
-  margin-top: auto;
+.rowDesc {
   font-size: 0.82rem;
-  font-weight: 650;
+  line-height: 1.35;
   color: var(--color-muted);
-  padding-top: 0.4rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.tileChevron {
+.rowChevron {
   flex-shrink: 0;
-  opacity: 0.88;
+  color: var(--color-muted);
+  opacity: 0.8;
 }
 
-.tileCta {
-  letter-spacing: 0.02em;
+.rowStatus {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+.rowDanger .rowTitle {
+  color: var(--color-danger);
+}
+
+.rowDanger .rowIcon {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 12%, transparent);
 }

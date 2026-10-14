@@ -30,6 +30,8 @@ export const NOTIFICATION_SERVICE_KEYS = [
   'sensor_sn2',
   'program_queue_changed',
   'controller_enable_changed',
+  'controller_offline',
+  'controller_online',
 ] as const
 
 export type NotificationServiceKey = (typeof NOTIFICATION_SERVICE_KEYS)[number]
@@ -46,6 +48,8 @@ export const NOTIFICATION_SERVICE_LABELS: Record<NotificationServiceKey, string>
   sensor_sn2: 'Sensor 2 change',
   program_queue_changed: 'Program queue changed',
   controller_enable_changed: 'Controller enable toggled',
+  controller_offline: 'Controller unreachable',
+  controller_online: 'Controller reachable again',
 }
 
 export const DEFAULT_NOTIFICATION_ROUTE: Record<NotificationServiceKey, string> = {
@@ -60,6 +64,8 @@ export const DEFAULT_NOTIFICATION_ROUTE: Record<NotificationServiceKey, string> 
   sensor_sn2: '/settings',
   program_queue_changed: '/programs',
   controller_enable_changed: '/settings',
+  controller_offline: '/',
+  controller_online: '/',
 }
 
 /** Default on/off when key missing from DB `enabledServices`. */
@@ -75,6 +81,8 @@ export const DEFAULT_SERVICE_ENABLED: Record<NotificationServiceKey, boolean> = 
   sensor_sn2: true,
   program_queue_changed: false,
   controller_enable_changed: true,
+  controller_offline: true,
+  controller_online: true,
 }
 
 export function defaultSettingsJson(): NotificationSettingsJson {

@@ -12,12 +12,15 @@ export type HydroDashAppBackupV1 = {
   dashboardLayouts: string | null
   dashboardTileVisibility: string | null
   dashboardTileOrder: string | null
+  /** Optional per-tile max heights (added later; absent in older backups). */
+  dashboardTileMaxHeight?: string | null
 }
 
 const THEME_KEY = 'hydrodash-theme'
 const LAYOUTS_KEY = 'hydrodash.dashboardRglLayouts.2'
 const VIS_KEY = 'hydrodash.dashboardTileVisibility'
 const ORDER_KEY = 'hydrodash.dashboardTileOrder'
+const MAX_H_KEY = 'hydrodash.dashboardTileMaxHeight'
 
 const PREF_KEYS: Record<keyof AppPreferences, string> = {
   isMetric: 'os_app_isMetric',
@@ -65,6 +68,7 @@ export function collectHydroDashAppBackup(preferences: AppPreferences): HydroDas
     dashboardLayouts: safeGet(LAYOUTS_KEY),
     dashboardTileVisibility: safeGet(VIS_KEY),
     dashboardTileOrder: safeGet(ORDER_KEY),
+    dashboardTileMaxHeight: safeGet(MAX_H_KEY),
   }
 }
 
@@ -104,6 +108,8 @@ export function parseHydroDashAppBackup(raw: unknown): HydroDashAppBackupV1 {
     dashboardTileVisibility:
       typeof o.dashboardTileVisibility === 'string' ? o.dashboardTileVisibility : null,
     dashboardTileOrder: typeof o.dashboardTileOrder === 'string' ? o.dashboardTileOrder : null,
+    dashboardTileMaxHeight:
+      typeof o.dashboardTileMaxHeight === 'string' ? o.dashboardTileMaxHeight : null,
   }
 }
 
@@ -121,6 +127,8 @@ export function applyHydroDashAppBackup(data: HydroDashAppBackupV1) {
   }
 
   safeSet(LAYOUTS_KEY, data.dashboardLayouts)
+  safeSet(MAX_H_KEY, data.dashboardTileMaxHeight ?? null)
+  window.dispatchEvent(new Event('hydrodash-dashboard-tile-max-height-changed'))
   window.dispatchEvent(new Event(EVT_RGL))
 
   safeSet(VIS_KEY, data.dashboardTileVisibility)
