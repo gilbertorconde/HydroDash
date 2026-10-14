@@ -5,6 +5,7 @@ import { qk, useJsonAll } from '../api/hooks'
 import { Download, Monitor, Router, TriangleAlert, Upload } from 'lucide-react'
 import { MoreSubpageLayout } from '../components/MoreSubpageLayout'
 import { Button, Card, ErrorBox, Pill, Spinner } from '../components/ui'
+import { useConfirm } from '../components/confirmContext'
 import { useAppPreferences } from '../lib/appPreferences'
 import {
   type OpenSprinklerControllerBackup,
@@ -38,6 +39,7 @@ function backupFilename(prefix: string) {
 
 export function ConfigBackupPage() {
   const ja = useJsonAll()
+  const confirm = useConfirm()
   const prefs = useAppPreferences()
   const qc = useQueryClient()
   const controllerInputRef = useRef<HTMLInputElement>(null)
@@ -112,13 +114,16 @@ export function ConfigBackupPage() {
       setControllerMsg('Wait for controller data to load, then try again.')
       return
     }
-    let msg =
-      'Replace all programs, station options, and device options on this controller from the backup?'
-    if (controllerBackupNetworkWarning(backup, ja.data)) {
-      msg +=
-        '\n\nWarning: network-related values differ. The device may no longer be reachable at this address.'
-    }
-    if (!window.confirm(msg)) {
+    const networkWarning = controllerBackupNetworkWarning(backup, ja.data)
+    const ok = await confirm({
+      title: 'Restore controller from backup?',
+      message: networkWarning
+        ? 'All programs, station options and device options are replaced. Network settings in the backup differ — the controller may no longer be reachable at this address.'
+        : 'All programs, station options and device options on this controller are replaced.',
+      confirmLabel: 'Restore',
+      tone: 'danger',
+    })
+    if (!ok) {
       setControllerMsg('Import cancelled.')
       return
     }
@@ -249,16 +254,18 @@ export function ConfigBackupPage() {
               accept="application/json,.json"
               className={styles.hiddenFile}
               aria-hidden
-              onChange={(e) => {
+              onChange={async (e) => {
                 const f = e.target.files?.[0]
                 e.target.value = ''
                 if (!f) return
                 setAppMsg(null)
-                if (
-                  !window.confirm(
-                    'Replace HydroDash display preferences, theme, and Home dashboard layout in this browser?',
-                  )
-                ) {
+                const ok = await confirm({
+                  title: 'Restore app settings?',
+                  message: 'Display preferences, theme and the Home layout in this browser are replaced.',
+                  confirmLabel: 'Restore',
+                  tone: 'danger',
+                })
+                if (!ok) {
                   setAppMsg('Import cancelled.')
                   return
                 }

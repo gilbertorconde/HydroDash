@@ -22,6 +22,7 @@ import {
   Select,
   Spinner,
 } from '../components/ui'
+import { useConfirm } from '../components/confirmContext'
 import { formatEpochSecondsLocale } from '../lib/formatLocale'
 import type { SensorDataEntry, SensorLogEntry } from '../lib/opensprinklerSensorsApi'
 import { sensorNumericData } from '../lib/opensprinklerSensorsApi'
@@ -158,6 +159,7 @@ export function AnalogSensorsPage() {
   const sf = useSensorTypes(apiOk === true)
   const readNow = useSensorReadNow()
   const delSensor = useSensorDelete()
+  const confirm = useConfirm()
   const sensorTypesList = useMemo(() => sf.data?.sensorTypes ?? [], [sf.data])
 
   const [editorOpen, setEditorOpen] = useState(false)
@@ -323,8 +325,14 @@ export function AnalogSensorsPage() {
                         label: 'Remove sensor…',
                         danger: true,
                         disabled: delSensor.isPending,
-                        onSelect: () => {
-                          if (!window.confirm(`Remove sensor ${nr}?`)) return
+                        onSelect: async () => {
+                          const ok = await confirm({
+                            title: `Remove ${name}?`,
+                            message: `Sensor ${nr} and its configuration are removed from the controller.`,
+                            confirmLabel: 'Remove',
+                            tone: 'danger',
+                          })
+                          if (!ok) return
                           delSensor.mutate(nr)
                         },
                       },

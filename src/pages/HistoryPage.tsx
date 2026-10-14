@@ -15,6 +15,7 @@ import {
   Segmented,
   Spinner,
 } from '../components/ui'
+import { useConfirm } from '../components/confirmContext'
 import { formatEpochTimeHmsLocale, formatEpochSecondsLocale } from '../lib/formatLocale'
 import { useAppPreferences } from '../lib/appPreferences'
 import {
@@ -148,6 +149,7 @@ export function HistoryPage() {
   const logs = useLogs(start, end, validRange)
   const deleteLog = useDeleteLog()
   const clearAllLogs = useClearAllLogs()
+  const confirm = useConfirm()
 
   const rawEntries = useMemo(() => (logs.data ?? []) as unknown[], [logs.data])
 
@@ -255,7 +257,13 @@ export function HistoryPage() {
   const runClearAll = async () => {
     setErr(null)
     setMsg(null)
-    if (!window.confirm('Clear all irrigation log data on the controller?')) return
+    const ok = await confirm({
+      title: 'Clear all logs?',
+      message: 'Every irrigation log entry on the controller is deleted. This cannot be undone.',
+      confirmLabel: 'Clear logs',
+      tone: 'danger',
+    })
+    if (!ok) return
     try {
       await clearAllLogs.mutateAsync()
       setMsg('All logs cleared.')
@@ -268,7 +276,13 @@ export function HistoryPage() {
   const runDeleteDay = async (day: string) => {
     setErr(null)
     setMsg(null)
-    if (!window.confirm(`Delete all log entries for ${day}?`)) return
+    const ok = await confirm({
+      title: `Delete logs for ${day}?`,
+      message: 'All log entries for this day are removed from the controller.',
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    })
+    if (!ok) return
     try {
       await deleteLog.mutateAsync(day)
       setMsg(`Deleted logs for ${day}.`)

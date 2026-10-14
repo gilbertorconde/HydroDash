@@ -27,6 +27,7 @@ import {
   Spinner,
   Switch,
 } from '../components/ui'
+import { useConfirm } from '../components/confirmContext'
 import { DurationInput } from '../components/DurationInput'
 import {
   CONTROLLER_ACTION_UI_TIMEOUT_MS,
@@ -135,6 +136,7 @@ export function StationsPage() {
   const manual = useManualStation()
   const changeStations = useChangeStations()
   const changeValues = useChangeValues()
+  const confirm = useConfirm()
   const pauseQueue = usePauseQueue()
 
   const snArr = useMemo(() => js.data?.sn ?? [], [js.data?.sn])
@@ -321,8 +323,14 @@ export function StationsPage() {
                   label: 'Stop all zones',
                   danger: true,
                   disabled: changeValues.isPending,
-                  onSelect: () => {
-                    if (!window.confirm('Stop every running zone and clear the watering queue?')) return
+                  onSelect: async () => {
+                    const ok = await confirm({
+                      title: 'Stop all zones?',
+                      message: 'Every running zone stops and the watering queue is cleared.',
+                      confirmLabel: 'Stop all',
+                      tone: 'danger',
+                    })
+                    if (!ok) return
                     void runAction(() => changeValues.mutateAsync({ rsn: 1 }), 'All zones stopped.')
                   },
                 },
@@ -409,12 +417,15 @@ export function StationsPage() {
                   )
                 }
                 onEdit={() => setEditSid(sid)}
-                onToggleDisabled={() => {
+                onToggleDisabled={async () => {
                   if (
                     !disabled &&
-                    !window.confirm(
-                      `Disable “${nameBase}”? It will not run from programs or manual start until you enable it again.`,
-                    )
+                    !(await confirm({
+                      title: `Disable “${nameBase}”?`,
+                      message: 'It will not run from programs or manual start until you enable it again.',
+                      confirmLabel: 'Disable zone',
+                      tone: 'danger',
+                    }))
                   ) {
                     return
                   }

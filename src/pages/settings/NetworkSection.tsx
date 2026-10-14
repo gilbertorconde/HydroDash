@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Field, Input, Switch } from '../../components/ui'
+import { useConfirm } from '../../components/confirmContext'
 import { octetsToIp, parseIpToOctets } from '../../lib/ipOctets'
 import { FieldGrid, SettingsForm, SubHeading } from './SettingsForm'
 import { intOf, num, type OptionPayload, type SectionCtx, useDraft } from './settingsShared'
@@ -58,6 +59,7 @@ export function NetworkSection({ ctx }: { ctx: SectionCtx }) {
   }, [opts, hasPort])
 
   const d = useDraft(base)
+  const confirm = useConfirm()
   const v = d.values
   const dhcpOn = v.dhcp === true
   const has = (k: string) => base[k] !== undefined
@@ -91,9 +93,13 @@ export function NetworkSection({ ctx }: { ctx: SectionCtx }) {
     }
     if (
       d.dirtyKeys.some((k) => RISKY_KEYS.includes(k)) &&
-      !window.confirm(
-        'Network changes can make the controller unreachable from HydroDash until you fix them on the device. Some only apply after a restart. Save anyway?',
-      )
+      !(await confirm({
+        title: 'Save network changes?',
+        message:
+          'Network changes can make the controller unreachable from HydroDash until you fix them on the device. Some only apply after a restart.',
+        confirmLabel: 'Save anyway',
+        tone: 'danger',
+      }))
     )
       return
     if (await ctx.apply(p)) d.discard()

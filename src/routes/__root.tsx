@@ -9,6 +9,8 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { ThemeProvider } from '../context/ThemeContext'
+import { ConfirmProvider } from '../components/ConfirmDialog'
+import { ToastProvider } from '../components/Toaster'
 import appCss from '../index.css?url'
 
 const queryClient = new QueryClient({
@@ -42,7 +44,11 @@ function RootComponent() {
     <ClientOnly fallback={<div />}>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <Outlet />
+          <ToastProvider>
+            <ConfirmProvider>
+              <Outlet />
+            </ConfirmProvider>
+          </ToastProvider>
           {import.meta.env.DEV ? <TanStackRouterDevtools position="bottom-right" /> : null}
         </ThemeProvider>
       </QueryClientProvider>

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Eraser, RotateCcw, Trash2, Wifi, Workflow } from 'lucide-react'
 import { ListGroup, ListRow } from '../../components/ui'
+import { useConfirm } from '../../components/confirmContext'
 import { osCommand } from '../../api/client'
 import { useChangeOptions, useChangeStations, useClearAllLogs, useDeleteAllPrograms } from '../../api/hooks'
 import { buildResetStationAttributesParams } from '../../lib/resetStationAttributes'
@@ -81,6 +82,7 @@ export function DangerSection({ ctx }: { ctx: SectionCtx }) {
   const cs = useChangeStations()
   const delAllProgs = useDeleteAllPrograms()
   const clearLogs = useClearAllLogs()
+  const confirm = useConfirm()
   const [busy, setBusy] = useState<string | null>(null)
 
   const hwv = num(opts.hwv, -1)
@@ -142,7 +144,8 @@ export function DangerSection({ ctx }: { ctx: SectionCtx }) {
   ]
 
   async function run(a: Action) {
-    if (!window.confirm(a.confirm)) return
+    const ok = await confirm({ title: `${a.title}?`, message: a.confirm, confirmLabel: a.title, tone: 'danger' })
+    if (!ok) return
     setBusy(a.id)
     try {
       await a.run()

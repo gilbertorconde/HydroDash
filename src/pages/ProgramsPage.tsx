@@ -111,6 +111,7 @@ import {
   Spinner,
   Switch,
 } from '../components/ui'
+import { useConfirm } from '../components/confirmContext'
 import { DurationInput } from '../components/DurationInput'
 import {
   CalendarClock,
@@ -746,6 +747,7 @@ function SortableProgramCard({
     transition,
     isDragging,
   } = useSortable({ id, disabled: sortDisabled })
+  const confirm = useConfirm()
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -801,10 +803,14 @@ function SortableProgramCard({
       label: 'Delete program',
       danger: true,
       disabled: del.isPending,
-      onSelect: () => {
-        if (window.confirm(`Delete "${displayName}"? This cannot be undone.`)) {
-          void runAction(() => del.mutateAsync(pid), 'Program deleted.')
-        }
+      onSelect: async () => {
+        const ok = await confirm({
+          title: `Delete “${displayName}”?`,
+          message: 'The program and its schedule are removed from the controller. This cannot be undone.',
+          confirmLabel: 'Delete program',
+          tone: 'danger',
+        })
+        if (ok) void runAction(() => del.mutateAsync(pid), 'Program deleted.')
       },
     },
   ]
@@ -985,6 +991,7 @@ export function ProgramsPage() {
   const toggleEn = useProgramToggle()
   const toggleUwt = useProgramUwt()
   const del = useDeleteProgram()
+  const confirm = useConfirm()
   const reorder = useReorderPrograms()
   const mp = useRunProgram()
   const cr = useRunOnce()
@@ -2155,7 +2162,13 @@ export function ProgramsPage() {
                 startIcon={<Trash2 size={15} aria-hidden />}
                 disabled={del.isPending}
                 onClick={async () => {
-                  if (window.confirm(`Delete "${editor.name || `Program ${editor.pid + 1}`}"?`)) {
+                  const confirmed = await confirm({
+                    title: `Delete “${editor.name || `Program ${editor.pid + 1}`}”?`,
+                    message: 'The program and its schedule are removed from the controller. This cannot be undone.',
+                    confirmLabel: 'Delete program',
+                    tone: 'danger',
+                  })
+                  if (confirmed) {
                     const ok = await runAction(() => del.mutateAsync(editor.pid), 'Program deleted.')
                     if (ok) setEditor(null)
                   }

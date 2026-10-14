@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { KeyRound } from 'lucide-react'
 import SparkMD5 from 'spark-md5'
 import { Button, Card, Field, Input, Switch } from '../../components/ui'
+import { useConfirm } from '../../components/confirmContext'
 import { useChangePassword } from '../../api/hooks'
 import { SettingsForm } from './SettingsForm'
 import { useDraft, type SectionCtx } from './settingsShared'
@@ -12,13 +13,17 @@ export function SecuritySection({ ctx }: { ctx: SectionCtx }) {
   const hasIpas = opts.ipas !== undefined
   const base = useMemo(() => ({ ipas: opts.ipas === 1 }), [opts.ipas])
   const d = useDraft(base)
+  const confirm = useConfirm()
 
   async function save() {
     if (
       d.values.ipas &&
-      !window.confirm(
-        'Ignore password lets anyone on your network control the controller without a password. Turn it on?',
-      )
+      !(await confirm({
+        title: 'Turn on “Ignore password”?',
+        message: 'Anyone on your network will be able to control the controller without a password.',
+        confirmLabel: 'Turn on',
+        tone: 'danger',
+      }))
     )
       return
     if (await ctx.apply({ ipas: d.values.ipas ? 1 : 0 })) d.discard()
@@ -44,6 +49,7 @@ export function SecuritySection({ ctx }: { ctx: SectionCtx }) {
 /** `/sp` — the firmware expects MD5 hashes of the new password (OpenSprinkler app behaviour). */
 function ChangePasswordCard({ ctx }: { ctx: SectionCtx }) {
   const change = useChangePassword()
+  const confirm = useConfirm()
   const [npw, setNpw] = useState('')
   const [cpw, setCpw] = useState('')
   const mismatch = cpw.length > 0 && npw !== cpw
@@ -51,9 +57,13 @@ function ChangePasswordCard({ ctx }: { ctx: SectionCtx }) {
 
   async function submit() {
     if (
-      !window.confirm(
-        'Change the controller password? HydroDash talks to the controller with the password configured on its server (OS_PASSWORD / OS_PW_HASH or OS_SITES) — update it there right after, or HydroDash will lose access.',
-      )
+      !(await confirm({
+        title: 'Change the controller password?',
+        message:
+          'HydroDash talks to the controller with the password configured on its server (OS_PASSWORD / OS_PW_HASH or OS_SITES). Update it there right after, or HydroDash will lose access.',
+        confirmLabel: 'Change password',
+        tone: 'danger',
+      }))
     )
       return
     try {

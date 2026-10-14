@@ -163,6 +163,20 @@
   filter: brightness(0.98);
 }
 
+.btn_dangerSolid {
+  background: var(--color-danger);
+  color: #fff;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-danger) 30%, transparent);
+}
+
+:root[data-theme='dark'] .btn_dangerSolid {
+  color: #2a0d10;
+}
+
+.btn_dangerSolid:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
 .btn_ghost {
   background: transparent;
   color: var(--color-muted);
