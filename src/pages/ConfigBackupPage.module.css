@@ -1,86 +1,82 @@
-.intro {
-  margin: 0 0 var(--space-xl);
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-md);
+  align-items: start;
 }
 
-.introPara {
-  margin: 0 0 var(--space-md);
-  color: var(--color-muted);
-  font-size: var(--text-body);
-  line-height: 1.65;
-  max-width: 42rem;
+@media (min-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.introPara:last-child {
-  margin-bottom: 0;
-}
-
-.stack {
+.cardBody {
   display: flex;
   flex-direction: column;
-  gap: var(--space-xl);
+  gap: var(--space-md);
 }
 
-.cardBodyLoose {
-  padding-top: 1.15rem !important;
-  padding-bottom: 1.25rem !important;
-}
-
-.subheading {
-  margin: 0 0 var(--space-sm);
-  font-size: 0.78rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--color-muted);
-}
-
-.subheadingSpaced {
-  margin-top: var(--space-lg);
-}
-
-.bulletList {
-  margin: 0 0 var(--space-lg);
-  padding-left: 1.2rem;
-  color: var(--color-muted);
-  font-size: 0.875rem;
-  line-height: 1.6;
-}
-
-.bulletList li {
-  margin-bottom: 0.5rem;
-}
-
-.bulletList li:last-child {
-  margin-bottom: 0;
-}
-
-.exportDesc {
-  margin: 0 0 var(--space-md);
-  font-size: 0.84rem;
-  line-height: 1.58;
-  color: var(--color-muted);
-  max-width: 38rem;
-}
-
-.importIntro {
-  margin: 0 0 var(--space-md);
-  font-size: 0.84rem;
-  line-height: 1.58;
-  color: var(--color-muted);
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-  align-items: center;
-}
-
-.actionsCol {
+.block {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
+}
+
+.subheading {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-muted);
+}
+
+.desc {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--color-muted);
+}
+
+.desc strong {
+  color: var(--color-text);
+}
+
+/* Destructive import lives in its own red-tinted block, never as the primary action. */
+.danger {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  padding: 0.9rem 1rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-danger-border);
+  background: color-mix(in srgb, var(--color-danger-bg) 60%, transparent);
+}
+
+.dangerHeading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: var(--color-danger);
+}
+
+.bulletList {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.bulletList li + li {
+  margin-top: 0.3rem;
+}
+
+.bulletList strong {
+  color: var(--color-text);
 }
 
 .hiddenFile {
@@ -92,16 +88,20 @@
 }
 
 .feedback {
-  margin-top: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
 }
 
-.feedback > * + * {
-  margin-top: var(--space-sm);
+.feedback > * {
+  margin-bottom: 0;
 }
 
 .ok {
-  margin: 0;
-  font-size: 0.88rem;
-  color: var(--color-ok, #2a9d8f);
-  line-height: 1.5;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius-md);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+  font-weight: 650;
+  font-size: var(--text-small);
 }

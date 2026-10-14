@@ -171,10 +171,18 @@ a {
   outline-offset: 3px;
 }
 
-/* Cards that directly follow a page hero overlap its bottom edge. */
+/* Cards that directly follow a page hero overlap its bottom edge (must match .hero_* in ui.module.css). */
 [data-page-hero] + * {
   position: relative;
-  margin-top: calc(-1 * var(--hero-overlap, 56px));
+  margin-top: -56px;
+}
+
+[data-page-hero='compact'] + * {
+  margin-top: -40px;
+}
+
+[data-page-hero='tall'] + * {
+  margin-top: -64px;
 }
 
 @media (prefers-reduced-motion: reduce) {

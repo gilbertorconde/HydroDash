@@ -2,8 +2,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 import { osCommand } from '../api/client'
 import { qk, useJsonAll } from '../api/hooks'
+import { Download, Monitor, Router, TriangleAlert, Upload } from 'lucide-react'
 import { MoreSubpageLayout } from '../components/MoreSubpageLayout'
-import { Button, Card, ErrorBox, Spinner } from '../components/ui'
+import { Button, Card, ErrorBox, Pill, Spinner } from '../components/ui'
 import { useAppPreferences } from '../lib/appPreferences'
 import {
   type OpenSprinklerControllerBackup,
@@ -125,57 +126,57 @@ export function ConfigBackupPage() {
   }
 
   return (
-    <MoreSubpageLayout title="Configuration backup">
-      <div className={styles.intro}>
-        <p className={styles.introPara}>
-          Export saves a full snapshot of programs, zones, and options from the controller.
-        </p>
-        <p className={styles.introPara}>
-          Import applies that snapshot and overwrites the configuration on the device you currently have
-          selected.
-        </p>
-        <p className={styles.introPara}>
-          The second card below is only for this browser: Home layout, theme, and display preferences. It
-          does not include your login or server-side settings.
-        </p>
-      </div>
-
-      <div className={styles.stack}>
-        <Card title="Controller" bodyClassName={styles.cardBodyLoose}>
+    <MoreSubpageLayout
+      title="Backup & restore"
+      eyebrow={<Pill tone="advanced">Advanced</Pill>}
+      subtitle="Save a snapshot of your controller, or of how HydroDash is set up in this browser."
+    >
+      <div className={styles.grid}>
+        <Card
+          title="Controller"
+          subtitle="Programs, zones and device options"
+          icon={<Router size={18} aria-hidden />}
+          bodyClassName={styles.cardBody}
+        >
           {ja.isLoading && !ja.data ? <Spinner /> : null}
           {ja.isError ? <ErrorBox message="Could not load configuration from the controller." /> : null}
 
-          <ul className={styles.bulletList}>
-            <li>
-              Import replaces <strong>all</strong> programs, zone names, station metadata, and device options
-              on the active controller.
-            </li>
-            <li>If you use multiple controllers, choose the right one under Controllers before importing.</li>
-            <li>
-              Very old backup files (programs from firmware before 2.1) cannot be applied here until they
-              have been loaded on the device with compatible firmware and you export a new backup.
-            </li>
-          </ul>
-
-          <h3 className={styles.subheading}>Export</h3>
-          <p className={styles.exportDesc}>
-            Download a JSON file with the full configuration. You can archive it, move it to another machine,
-            or import it later from this page.
-          </p>
-          <div className={styles.actions}>
-            <Button variant="secondary" disabled={!ja.data} onClick={exportController}>
-              Download controller backup
-            </Button>
-          </div>
-
-          <h3 className={`${styles.subheading} ${styles.subheadingSpaced}`}>Import</h3>
-          <p className={styles.importIntro}>
-            Choose a backup JSON file. You will be asked to confirm before anything is written to the
-            controller.
-          </p>
-          <div className={styles.actionsCol}>
+          <section className={styles.block}>
+            <h3 className={styles.subheading}>Export</h3>
+            <p className={styles.desc}>
+              Download a JSON file with the full configuration of the active controller. Archive it, move it to
+              another machine, or import it later from this page.
+            </p>
             <Button
               variant="primary"
+              startIcon={<Download size={16} aria-hidden />}
+              disabled={!ja.data}
+              onClick={exportController}
+            >
+              Download controller backup
+            </Button>
+          </section>
+
+          <section className={styles.danger}>
+            <h3 className={styles.dangerHeading}>
+              <TriangleAlert size={16} aria-hidden />
+              Import (replaces configuration)
+            </h3>
+            <ul className={styles.bulletList}>
+              <li>
+                Replaces <strong>all</strong> programs, zone names, station metadata and device options on the
+                active controller.
+              </li>
+              <li>If you use multiple controllers, choose the right one under Controllers before importing.</li>
+              <li>
+                Very old backup files (programs from firmware before 2.1) cannot be applied here until they have been
+                loaded on the device with compatible firmware and you export a new backup.
+              </li>
+            </ul>
+            <p className={styles.desc}>You will be asked to confirm before anything is written to the controller.</p>
+            <Button
+              variant="danger"
+              startIcon={<Upload size={16} aria-hidden />}
               disabled={importController.isPending || !ja.data}
               onClick={() => controllerInputRef.current?.click()}
             >
@@ -193,47 +194,50 @@ export function ConfigBackupPage() {
                 if (f) void onPickControllerFile(f)
               }}
             />
-          </div>
+          </section>
 
-          <div className={styles.feedback}>
-            {controllerLocalErr ? <ErrorBox message={controllerLocalErr} /> : null}
-            {importController.isError ? (
-              <ErrorBox
-                message={importController.error instanceof Error ? importController.error.message : 'Import failed'}
-              />
-            ) : null}
-            {controllerMsg ? <p className={styles.ok}>{controllerMsg}</p> : null}
-          </div>
+          {controllerLocalErr || importController.isError || controllerMsg ? (
+            <div className={styles.feedback}>
+              {controllerLocalErr ? <ErrorBox message={controllerLocalErr} /> : null}
+              {importController.isError ? (
+                <ErrorBox
+                  message={importController.error instanceof Error ? importController.error.message : 'Import failed'}
+                />
+              ) : null}
+              {controllerMsg ? <p className={styles.ok}>{controllerMsg}</p> : null}
+            </div>
+          ) : null}
         </Card>
 
-        <Card title="HydroDash app (this browser)" bodyClassName={styles.cardBodyLoose}>
-          <ul className={styles.bulletList}>
-            <li>
-              Covers display preferences, theme mode, and Home dashboard layout in <strong>this</strong>{' '}
-              browser only.
-            </li>
-            <li>Does not include login sessions or server-side notification settings.</li>
-          </ul>
-
-          <h3 className={styles.subheading}>Export</h3>
-          <p className={styles.exportDesc}>
-            Download a JSON file you can keep as a snapshot of how HydroDash is set up on this device and
-            browser.
-          </p>
-          <div className={styles.actions}>
-            <Button variant="secondary" onClick={exportApp}>
+        <Card
+          title="HydroDash app"
+          subtitle="This browser only"
+          icon={<Monitor size={18} aria-hidden />}
+          bodyClassName={styles.cardBody}
+        >
+          <section className={styles.block}>
+            <h3 className={styles.subheading}>Export</h3>
+            <p className={styles.desc}>
+              Saves display preferences, theme mode and the Home dashboard layout in <strong>this</strong> browser.
+              Does not include login sessions or server-side notification settings.
+            </p>
+            <Button variant="primary" startIcon={<Download size={16} aria-hidden />} onClick={exportApp}>
               Download app backup
             </Button>
-          </div>
+          </section>
 
-          <h3 className={`${styles.subheading} ${styles.subheadingSpaced}`}>Import</h3>
-          <p className={styles.importIntro}>
-            Choose a HydroDash app backup file. You will be asked to confirm; the page reloads after a
-            successful restore.
-          </p>
-          <div className={styles.actionsCol}>
+          <section className={styles.danger}>
+            <h3 className={styles.dangerHeading}>
+              <TriangleAlert size={16} aria-hidden />
+              Restore (replaces app settings)
+            </h3>
+            <p className={styles.desc}>
+              Choose a HydroDash app backup file. You will be asked to confirm; the page reloads after a successful
+              restore.
+            </p>
             <Button
-              variant="primary"
+              variant="danger"
+              startIcon={<Upload size={16} aria-hidden />}
               disabled={importApp.isPending}
               onClick={() => appInputRef.current?.click()}
             >
@@ -261,16 +265,16 @@ export function ConfigBackupPage() {
                 importApp.mutate(f)
               }}
             />
-          </div>
+          </section>
 
-          <div className={styles.feedback}>
-            {importApp.isError ? (
-              <ErrorBox
-                message={importApp.error instanceof Error ? importApp.error.message : 'Import failed'}
-              />
-            ) : null}
-            {appMsg ? <p className={styles.ok}>{appMsg}</p> : null}
-          </div>
+          {importApp.isError || appMsg ? (
+            <div className={styles.feedback}>
+              {importApp.isError ? (
+                <ErrorBox message={importApp.error instanceof Error ? importApp.error.message : 'Import failed'} />
+              ) : null}
+              {appMsg ? <p className={styles.ok}>{appMsg}</p> : null}
+            </div>
+          ) : null}
         </Card>
       </div>
     </MoreSubpageLayout>

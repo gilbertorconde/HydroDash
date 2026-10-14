@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
-import { X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Activity, X } from 'lucide-react'
 import { useSensorSave } from '../api/hooks'
-import { Button, ErrorBox } from './ui'
+import { AdvancedSection, Button, ErrorBox, Field, Input, Select, Switch } from './ui'
 import type { SensorTypeEntry } from '../lib/opensprinklerSensorsApi'
 import {
   ipv4StringToOsDec,
@@ -121,15 +121,21 @@ type Props = {
 export function SensorEditorModal({ open, onClose, mode, initialRow, nextNr, types }: Props) {
   const save = useSensorSave()
   const [form, setForm] = useState<SensorFormState>(() => defaultForm(nextNr, types))
-  const prevOpenRef = useRef(false)
+  // Reset the form each time the dialog opens (state adjusted during render, not in an effect).
+  const [prevOpen, setPrevOpen] = useState(open)
+  if (open !== prevOpen) {
+    setPrevOpen(open)
+    if (open) setForm(mode === 'edit' && initialRow ? formFromRow(initialRow) : defaultForm(nextNr, types))
+  }
 
   useEffect(() => {
-    if (open && !prevOpenRef.current) {
-      if (mode === 'edit' && initialRow) setForm(formFromRow(initialRow))
-      else setForm(defaultForm(nextNr, types))
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
     }
-    prevOpenRef.current = open
-  }, [open, mode, initialRow, nextNr, types])
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open, onClose])
 
   if (!open) return null
 
@@ -146,6 +152,45 @@ export function SensorEditorModal({ open, onClose, mode, initialRow, nextNr, typ
     }
   }
 
+  const intField = (
+    key: 'nr' | 'group' | 'port' | 'id' | 'ri',
+    id: string,
+    label: string,
+    opts: { min?: number; floor?: number; disabled?: boolean } = {},
+  ) => (
+    <Field label={label} htmlFor={id} className={styles.field}>
+      <Input
+        id={id}
+        type="number"
+        min={opts.min ?? 0}
+        value={form[key]}
+        disabled={opts.disabled}
+        onChange={(e) => {
+          const n = parseInt(e.target.value, 10)
+          set(key, opts.floor != null ? Math.max(opts.floor, n || opts.floor) : n || 0)
+        }}
+      />
+    </Field>
+  )
+
+  const floatField = (key: 'fac' | 'div' | 'offset' | 'offset2', id: string, label: string) => (
+    <Field label={label} htmlFor={id} className={styles.field}>
+      <Input
+        id={id}
+        type="number"
+        step="any"
+        value={form[key]}
+        onChange={(e) => set(key, parseFloat(e.target.value) || 0)}
+      />
+    </Field>
+  )
+
+  const textField = (key: 'topic' | 'filter' | 'url', id: string, label: string) => (
+    <Field label={label} htmlFor={id} className={`${styles.field} ${styles.fieldWide}`}>
+      <Input id={id} value={form[key]} onChange={(e) => set(key, e.target.value)} />
+    </Field>
+  )
+
   return (
     <div className={styles.backdrop} role="presentation" onClick={onClose}>
       <div
@@ -156,235 +201,109 @@ export function SensorEditorModal({ open, onClose, mode, initialRow, nextNr, typ
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.header}>
-          <h2 id="sensor-editor-title" className={styles.title}>
-            {mode === 'new' ? 'Add sensor' : `Edit sensor ${form.nr}`}
-          </h2>
+          <span className={styles.headerIcon}>
+            <Activity size={18} aria-hidden />
+          </span>
+          <div className={styles.headerText}>
+            <h2 id="sensor-editor-title" className={styles.title}>
+              {mode === 'new' ? 'Add sensor' : `Edit sensor ${form.nr}`}
+            </h2>
+            <p className={styles.subtitle}>Values are sent to the controller as-is; match them to your hardware.</p>
+          </div>
           <button type="button" className={styles.closeBtn} onClick={onClose} aria-label="Close">
             <X size={18} aria-hidden />
           </button>
         </div>
         <div className={styles.body}>
-          <p className={styles.hint}>
-            Same fields as the controller sensor screen: values are sent as the usual query parameters
-            (including reversed packed IP). Adjust for your hardware and sensor type.
-          </p>
-
           {save.isError ? (
             <ErrorBox message={save.error instanceof Error ? save.error.message : 'Save failed'} />
           ) : null}
 
-          <div className={styles.grid}>
-            <div className={styles.field}>
-              <label htmlFor="se-nr">Nr</label>
-              <input
-                id="se-nr"
-                className={styles.input}
-                type="number"
-                min={1}
-                value={form.nr}
-                disabled={mode === 'edit'}
-                onChange={(e) => set('nr', Math.max(1, parseInt(e.target.value, 10) || 1))}
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="se-type">Type</label>
+          <Field label="Name" htmlFor="se-name">
+            <Input id="se-name" value={form.name} onChange={(e) => set('name', e.target.value)} />
+          </Field>
+          <div className={styles.gridTwo}>
+            <Field label="Type" htmlFor="se-type" className={styles.field}>
               {types.length > 0 ? (
-                <select
-                  id="se-type"
-                  className={styles.input}
-                  value={form.type}
-                  onChange={(e) => set('type', parseInt(e.target.value, 10))}
-                >
+                <Select id="se-type" value={form.type} onChange={(e) => set('type', parseInt(e.target.value, 10))}>
                   {types.map((t) => (
                     <option key={t.type} value={t.type}>
                       {t.type} — {t.name} ({t.unit})
                     </option>
                   ))}
-                </select>
+                </Select>
               ) : (
-                <input
+                <Input
                   id="se-type"
-                  className={styles.input}
                   type="number"
                   min={0}
                   value={form.type}
                   onChange={(e) => set('type', parseInt(e.target.value, 10) || 0)}
                 />
               )}
-            </div>
-            <div className={`${styles.field} ${styles.fieldWide}`}>
-              <label htmlFor="se-name">Name</label>
-              <input
-                id="se-name"
-                className={styles.input}
-                value={form.name}
-                onChange={(e) => set('name', e.target.value)}
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="se-group">Group</label>
-              <input
-                id="se-group"
-                className={styles.input}
-                type="number"
-                min={0}
-                value={form.group}
-                onChange={(e) => set('group', parseInt(e.target.value, 10) || 0)}
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="se-ip">IP (network sensors)</label>
-              <input
-                id="se-ip"
-                className={styles.input}
-                inputMode="decimal"
-                placeholder="0.0.0.0"
-                value={form.ipStr}
-                onChange={(e) => set('ipStr', e.target.value)}
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="se-port">Port</label>
-              <input
-                id="se-port"
-                className={styles.input}
-                type="number"
-                min={0}
-                value={form.port}
-                onChange={(e) => set('port', parseInt(e.target.value, 10) || 0)}
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="se-id">Id (ADC / sub-id)</label>
-              <input
-                id="se-id"
-                className={styles.input}
-                type="number"
-                min={0}
-                value={form.id}
-                onChange={(e) => set('id', parseInt(e.target.value, 10) || 0)}
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="se-ri">Read interval (s)</label>
-              <input
-                id="se-ri"
-                className={styles.input}
-                type="number"
-                min={1}
-                value={form.ri}
-                onChange={(e) => set('ri', Math.max(1, parseInt(e.target.value, 10) || 1))}
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="se-fac">Factor (user-defined)</label>
-              <input
-                id="se-fac"
-                className={styles.input}
-                type="number"
-                step="any"
-                value={form.fac}
-                onChange={(e) => set('fac', parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="se-div">Divider</label>
-              <input
-                id="se-div"
-                className={styles.input}
-                type="number"
-                step="any"
-                value={form.div}
-                onChange={(e) => set('div', parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="se-unit">Unit label</label>
-              <input
-                id="se-unit"
-                className={styles.input}
-                value={form.unit}
-                onChange={(e) => set('unit', e.target.value)}
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="se-off1">Offset</label>
-              <input
-                id="se-off1"
-                className={styles.input}
-                type="number"
-                step="any"
-                value={form.offset}
-                onChange={(e) => set('offset', parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="se-off2">Offset 2</label>
-              <input
-                id="se-off2"
-                className={styles.input}
-                type="number"
-                step="any"
-                value={form.offset2}
-                onChange={(e) => set('offset2', parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            <div className={`${styles.field} ${styles.fieldWide}`}>
-              <label htmlFor="se-topic">MQTT topic</label>
-              <input
-                id="se-topic"
-                className={styles.input}
-                value={form.topic}
-                onChange={(e) => set('topic', e.target.value)}
-              />
-            </div>
-            <div className={`${styles.field} ${styles.fieldWide}`}>
-              <label htmlFor="se-filter">MQTT filter</label>
-              <input
-                id="se-filter"
-                className={styles.input}
-                value={form.filter}
-                onChange={(e) => set('filter', e.target.value)}
-              />
-            </div>
-            <div className={`${styles.field} ${styles.fieldWide}`}>
-              <label htmlFor="se-url">URL (reserved)</label>
-              <input
-                id="se-url"
-                className={styles.input}
-                value={form.url}
-                onChange={(e) => set('url', e.target.value)}
-              />
-            </div>
+            </Field>
+            <Field label="Unit label" htmlFor="se-unit" className={styles.field} hint="Leave empty to use the type’s unit">
+              <Input id="se-unit" value={form.unit} onChange={(e) => set('unit', e.target.value)} />
+            </Field>
           </div>
+          <Switch
+            checked={form.enable}
+            onChange={(v) => set('enable', v)}
+            label="Enabled"
+            description="Read this sensor on its interval"
+          />
 
-          <div className={styles.checkRow}>
-            <label>
-              <input
-                type="checkbox"
-                checked={form.enable}
-                onChange={(e) => set('enable', e.target.checked)}
+          <AdvancedSection
+            id="sensors.editor"
+            title="Advanced"
+            description="Number, wiring/network address, scaling, MQTT and logging"
+          >
+            <div className={styles.grid}>
+              {intField('nr', 'se-nr', 'Nr', { min: 1, floor: 1, disabled: mode === 'edit' })}
+              {intField('group', 'se-group', 'Group')}
+              <Field label="IP (network sensors)" htmlFor="se-ip" className={styles.field}>
+                <Input
+                  id="se-ip"
+                  inputMode="decimal"
+                  placeholder="0.0.0.0"
+                  value={form.ipStr}
+                  onChange={(e) => set('ipStr', e.target.value)}
+                />
+              </Field>
+              {intField('port', 'se-port', 'Port')}
+              {intField('id', 'se-id', 'Id (ADC / sub-id)')}
+              {intField('ri', 'se-ri', 'Read interval (s)', { min: 1, floor: 1 })}
+              {floatField('fac', 'se-fac', 'Factor (user-defined)')}
+              {floatField('div', 'se-div', 'Divider')}
+              {floatField('offset', 'se-off1', 'Offset')}
+              {floatField('offset2', 'se-off2', 'Offset 2')}
+              {textField('topic', 'se-topic', 'MQTT topic')}
+              {textField('filter', 'se-filter', 'MQTT filter')}
+              {textField('url', 'se-url', 'URL (reserved)')}
+            </div>
+            <div>
+              <Switch
+                checked={form.log}
+                onChange={(v) => set('log', v)}
+                label="Logging"
+                description="Keep a history of readings on the controller"
               />
-              Enabled
-            </label>
-            <label>
-              <input type="checkbox" checked={form.log} onChange={(e) => set('log', e.target.checked)} />
-              Logging
-            </label>
-            <label>
-              <input type="checkbox" checked={form.show} onChange={(e) => set('show', e.target.checked)} />
-              Show on device home
-            </label>
-          </div>
-
-          <div className={styles.actions}>
-            <Button variant="ghost" type="button" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button variant="primary" type="button" disabled={save.isPending} onClick={() => void submit()}>
-              {save.isPending ? 'Saving…' : 'Save'}
-            </Button>
-          </div>
+              <Switch
+                checked={form.show}
+                onChange={(v) => set('show', v)}
+                label="Show on device home"
+                description="Display on the controller’s own home screen"
+              />
+            </div>
+          </AdvancedSection>
+        </div>
+        <div className={styles.actions}>
+          <Button variant="ghost" type="button" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="primary" type="button" disabled={save.isPending} onClick={() => void submit()}>
+            {save.isPending ? 'Saving…' : 'Save'}
+          </Button>
         </div>
       </div>
     </div>

@@ -251,7 +251,7 @@ export function PageHero({
   size?: 'compact' | 'default' | 'tall'
 }) {
   return (
-    <section data-page-hero className={cx(styles.hero, styles[`hero_${size}`])}>
+    <section data-page-hero={size} className={cx(styles.hero, styles[`hero_${size}`])}>
       <div className={styles.heroWaves} aria-hidden />
       <div className={styles.heroInner}>
         {back ? (
@@ -289,9 +289,29 @@ export function SectionHeader({ title, action }: { title: ReactNode; action?: Re
   )
 }
 
-/** Inset list container for ListRow items. */
-export function ListGroup({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cx(styles.listGroup, className)}>{children}</div>
+/** Inset list container for ListRow items; the optional title sits inside the card (iOS grouped style). */
+export function ListGroup({
+  title,
+  action,
+  children,
+  className,
+}: {
+  title?: ReactNode
+  action?: ReactNode
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <div className={cx(styles.listGroup, className)}>
+      {title ? (
+        <div className={styles.listHeader}>
+          <h2 className={styles.sectionTitle}>{title}</h2>
+          {action}
+        </div>
+      ) : null}
+      {children}
+    </div>
+  )
 }
 
 type ListRowProps = {

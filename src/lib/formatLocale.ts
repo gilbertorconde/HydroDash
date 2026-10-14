@@ -1,9 +1,14 @@
-/** Locale-aware timestamps; `hour12` from app prefs (Settings → 24-hour time). */
+/**
+ * Locale-aware timestamps; `hour12` from app prefs (Settings → 24-hour time).
+ * Inputs are controller epochs, which encode the controller's local wall clock as UTC,
+ * so they are formatted in UTC to show the controller's own time.
+ */
 export function formatEpochSecondsLocale(epochSec: number, opts?: { hour12?: boolean }): string {
   const d = new Date(epochSec * 1000)
   if (Number.isNaN(d.getTime())) return '—'
   return d.toLocaleString(undefined, {
     hour12: opts?.hour12 ?? true,
+    timeZone: 'UTC',
     year: 'numeric',
     month: 'short',
     day: 'numeric',
@@ -18,6 +23,7 @@ export function formatEpochTimeHmsLocale(epochSec: number, opts?: { hour12?: boo
   if (Number.isNaN(d.getTime())) return '—'
   return d.toLocaleTimeString(undefined, {
     hour12: opts?.hour12 ?? true,
+    timeZone: 'UTC',
     hour: 'numeric',
     minute: '2-digit',
     second: '2-digit',

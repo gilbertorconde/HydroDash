@@ -18,20 +18,21 @@
   transition: background-color 0.15s ease;
 }
 
-.bellBtn:hover {
+.bellBtn:hover,
+.bellBtn[aria-expanded='true'] {
   background: var(--glass-hover);
 }
 
 .badge {
   position: absolute;
-  top: -0.15rem;
-  right: -0.15rem;
-  min-width: 1rem;
-  height: 1rem;
-  padding: 0 0.28rem;
-  font-size: 0.62rem;
+  top: -0.2rem;
+  right: -0.2rem;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 0.3rem;
+  font-size: 0.64rem;
   font-weight: 800;
-  line-height: 1rem;
+  line-height: 1.15rem;
   text-align: center;
   border-radius: 999px;
   background: var(--color-danger);
@@ -41,17 +42,27 @@
 
 .panel {
   position: absolute;
-  top: calc(100% + 0.45rem);
+  top: calc(100% + 0.55rem);
   right: 0;
-  width: min(22rem, calc(100vw - 2rem));
-  max-height: min(70vh, 24rem);
-  overflow: auto;
+  width: min(24rem, calc(100vw - 2rem));
+  display: flex;
+  flex-direction: column;
+  max-height: min(75vh, 32rem);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: var(--shadow-lg);
   color: var(--color-text);
+  overflow: hidden;
   z-index: 50;
+  animation: panelIn 0.16s ease-out;
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
 }
 
 /* The bell is not at the header's right edge on phones, so anchor to the viewport instead. */
@@ -60,70 +71,208 @@
     position: fixed;
     /* Directly under the floating header. */
     top: calc(var(--header-h) + env(safe-area-inset-top));
-    left: 1rem;
-    right: 1rem;
+    left: 0.75rem;
+    right: 0.75rem;
     width: auto;
-    max-height: min(70vh, 28rem);
+    max-height: calc(100dvh - var(--header-h) - var(--tabbar-h) - 2.5rem - env(safe-area-inset-top));
   }
 }
 
 .panelHeader {
-  padding: 0.55rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 0.7rem 0.6rem 0.7rem 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panelTitle {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.newPill {
+  padding: 0.15rem 0.55rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
   font-size: 0.72rem;
   font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+}
+
+.closeBtn {
+  margin-left: auto;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
   color: var(--color-muted);
-  border-bottom: 1px solid var(--color-border);
-  position: sticky;
-  top: 0;
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
-  backdrop-filter: blur(8px);
+  cursor: pointer;
+}
+
+.closeBtn:hover {
+  color: var(--color-text);
+  background: var(--color-elevated);
+}
+
+.list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0.35rem;
 }
 
 .item {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
   width: 100%;
+  padding: 0.7rem 0.65rem;
   text-align: left;
-  padding: 0.65rem 0.75rem;
   border: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 70%, transparent);
+  border-radius: var(--radius-md);
   background: transparent;
   color: inherit;
   cursor: pointer;
   font: inherit;
-  transition: background 0.12s ease;
+  transition: background-color 0.12s ease;
+}
+
+.item + .item {
+  margin-top: 2px;
 }
 
 .item:hover {
-  background: color-mix(in srgb, var(--color-elevated) 55%, var(--color-surface));
+  background: var(--color-elevated);
+}
+
+.itemNew {
+  background: color-mix(in srgb, var(--color-accent-soft) 55%, transparent);
+}
+
+.itemIcon {
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  flex-shrink: 0;
+  border-radius: 12px;
+}
+
+.tone_accent {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.tone_success {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.tone_warning {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.tone_danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.tone_advanced {
+  background: var(--color-advanced-soft);
+  color: var(--color-advanced);
+}
+
+.itemText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
 }
 
 .itemTitle {
-  font-weight: 700;
-  font-size: 0.86rem;
-  margin: 0 0 0.2rem;
+  font-weight: 750;
+  font-size: 0.88rem;
+  line-height: 1.3;
+}
+
+.itemBody {
+  font-size: 0.8rem;
+  color: var(--color-muted);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .itemMeta {
   font-size: 0.72rem;
+  font-weight: 600;
   color: var(--color-muted);
-  margin: 0;
-}
-
-.empty {
-  padding: 1rem 0.75rem;
-  font-size: 0.86rem;
-  color: var(--color-muted);
-  margin: 0;
 }
 
 .unreadDot {
-  display: inline-block;
-  width: 0.35rem;
-  height: 0.35rem;
+  flex-shrink: 0;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-top: 0.35rem;
   border-radius: 50%;
   background: var(--color-accent);
-  margin-right: 0.35rem;
-  vertical-align: middle;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.3rem;
+  padding: 2rem 1rem;
+}
+
+.emptyIcon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: 0.25rem;
+  border-radius: 16px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.emptyTitle {
+  font-weight: 800;
+}
+
+.emptyDesc {
+  font-size: var(--text-small);
+  color: var(--color-muted);
+}
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.35rem;
+}
+
+.skeleton {
+  height: 3.2rem;
+  border-radius: var(--radius-md);
+  background: var(--color-elevated);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.55;
+  }
 }

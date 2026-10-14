@@ -1,15 +1,16 @@
-export { DashboardTile, RGL_DRAG_HANDLE_CLASS } from './DashboardTile'
-export { NowRunningWidget } from './NowRunningWidget'
-export { ControllerWidget } from './ControllerWidget'
-export { LiveStatusWidget } from './LiveStatusWidget'
-export { SensorsWidget } from './SensorsWidget'
-export { HistoryWidget } from './HistoryWidget'
-export { QuickRunWidget, type RunnableProgram } from './QuickRunWidget'
-export { DASHBOARD_TILE_TITLES } from './tileTitles'
+export { HomeHero } from './HomeHero'
+export { UpNextCard } from './UpNextCard'
+export { ConditionsCard } from './ConditionsCard'
+export { RainDelayCard } from './RainDelayCard'
+export { ProgramsCard, type RunnableProgram } from './ProgramsCard'
+export { RecentActivityCard } from './RecentActivityCard'
+export { ControllerCard } from './ControllerCard'
+export { CustomizeHome } from './CustomizeHome'
 export {
   buildNowRunning,
   countWateringZones,
   findNextScheduledRun,
+  findUpcomingRuns,
   jlRangeLastTwoDays,
   masterStationIds,
   programWatersEnabledStation,
