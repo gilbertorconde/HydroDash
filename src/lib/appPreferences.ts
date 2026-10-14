@@ -13,6 +13,7 @@ const KEYS = {
   sortByStationName: 'os_app_sortByStationName',
   showDisabled: 'showDisabled',
   showStationNum: 'showStationNum',
+  showAdvanced: 'hydrodash.showAdvanced',
 } as const
 
 function readBool(key: string, defaultValue: boolean): boolean {
@@ -40,6 +41,8 @@ export type AppPreferences = {
   sortByStationName: boolean
   showDisabled: boolean
   showStationNum: boolean
+  /** Expand "Advanced" sections by default (installer / power-user mode). */
+  showAdvanced: boolean
 }
 
 const defaultMetric =
@@ -54,6 +57,7 @@ export function loadAppPreferences(): AppPreferences {
     sortByStationName: readBool(KEYS.sortByStationName, false),
     showDisabled: readBool(KEYS.showDisabled, false),
     showStationNum: readBool(KEYS.showStationNum, false),
+    showAdvanced: readBool(KEYS.showAdvanced, false),
   }
 }
 

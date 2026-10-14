@@ -4,24 +4,22 @@
 
 .bellBtn {
   position: relative;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.6rem;
+  height: 2.6rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-surface) 55%, var(--color-elevated));
-  color: var(--color-text);
+  border-radius: 50%;
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  color: var(--hero-text);
+  backdrop-filter: blur(10px);
   cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+  transition: background-color 0.15s ease;
 }
 
 .bellBtn:hover {
-  background: var(--color-elevated);
-  border-color: color-mix(in srgb, var(--color-accent) 35%, var(--color-border));
+  background: var(--glass-hover);
 }
 
 .badge {
@@ -38,7 +36,7 @@
   border-radius: 999px;
   background: var(--color-danger);
   color: #fff;
-  box-shadow: 0 0 0 2px var(--color-surface);
+  box-shadow: 0 0 0 2px var(--hero-via);
 }
 
 .panel {
@@ -51,7 +49,8 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-text);
   z-index: 50;
 }
 
@@ -59,8 +58,8 @@
 @media (max-width: 640px) {
   .panel {
     position: fixed;
-    /* Sticky header is ~3.6rem tall at this width (0.65rem padding + 2.25rem buttons). */
-    top: 3.75rem;
+    /* Directly under the floating header. */
+    top: calc(var(--header-h) + env(safe-area-inset-top));
     left: 1rem;
     right: 1rem;
     width: auto;
