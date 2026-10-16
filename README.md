@@ -147,8 +147,6 @@ To run **your own build** instead of the published image, use the [single-contai
 
 [`.github/workflows/docker-publish.yml`](.github/workflows/docker-publish.yml) builds and pushes **`ghcr.io/gilbertorconde/hydrodash`** (web + notify). Triggers: pushes to `master` / `main`, tags `v*`, pull requests (build only, no push), and **workflow_dispatch**. Tags include branch name, **`latest`** (on default branch), **semver** for `v*` tags, PR refs, and **git SHA**.
 
-HydroDash is **public**; if GitHub creates the package as **private** at first, set **Package settings → Change package visibility → Public** once.
-
 ---
 
 ## License
