@@ -3,7 +3,7 @@
   HydroDash
 </h1>
 
-A modern, mobile-first web app for **OpenSprinkler** irrigation controllers — water a zone in two taps, see what's running from your lock screen notifications, and keep the installer-level settings out of the way until you need them.
+A modern, mobile-first web app for **OpenSprinkler** irrigation controllers: water a zone in two taps, see what's running from your lock screen notifications, and keep the installer-level settings out of the way until you need them.
 
 The npm package name in `package.json` is **hydrodash**; a default `git clone` of this repo creates a **HydroDash** directory.
 
@@ -15,20 +15,20 @@ The npm package name in `package.json` is **hydrodash**; a default `git clone` o
 
 ## Features
 
-- **Home** — a live *Now running* header (zone, countdown, progress, stop / pause; several zones at once), what's up next, conditions (watering level, rain delay, sensors, sunrise/sunset, weather readings when your provider sends them), one-tap rain delay, quick program runs, recent activity and controller status. Cards can be hidden and reordered (*Customize Home*).
-- **Zones** — start any zone with 5/10/15/30-minute chips or a custom duration, live countdown on the running zone, rename and enable/disable, station attributes.
-- **Programs** — clear program cards, run now / run once, a program editor with everyday fields up front and advanced scheduling (interval, odd/even, repeats, sunrise/sunset starts, date ranges) tucked away, and a day *Schedule preview*.
-- **History** — table or timeline of what ran, grouped by day or zone, with export.
-- **Weather** — watering level, adjustment method and status, live readings, provider and API key.
-- **Sensors** — extended analog sensors (live values, charts, editor) on firmware that supports them.
-- **Settings** — split into **Basic** (location & time, watering, app preferences) and **Advanced** (master valves, stations, sensor wiring, integrations — MQTT / email / IFTTT / OTC, LCD, network, power, logging, security incl. password change, and a *Danger zone*).
-- **Notifications** — in-app inbox plus ntfy push for zone/program starts and stops, rain delay, sensors, weather errors and *controller unreachable / back online* alerts.
-- **More** — backup & restore (controller and app settings), multiple controllers, diagnostics.
+- **Home**: a live *Now running* header (zone, countdown, progress, stop / pause; several zones at once), what's up next, conditions (watering level, rain delay, sensors, sunrise/sunset, weather readings when your provider sends them), one-tap rain delay, quick program runs, recent activity and controller status. Cards can be hidden and reordered (*Customize Home*).
+- **Zones**: start any zone with 5/10/15/30-minute chips or a custom duration, live countdown on the running zone, rename and enable/disable, station attributes.
+- **Programs**: clear program cards, run now / run once, a program editor with everyday fields up front and advanced scheduling (interval, odd/even, repeats, sunrise/sunset starts, date ranges) tucked away, and a day *Schedule preview*.
+- **History**: table or timeline of what ran, grouped by day or zone, with export.
+- **Weather**: watering level, adjustment method and status, live readings, provider and API key.
+- **Sensors**: extended analog sensors (live values, charts, editor) on firmware that supports them.
+- **Settings**: split into **Basic** (location & time, watering, app preferences) and **Advanced** (master valves, stations, sensor wiring, integrations: MQTT / email / IFTTT / OTC, LCD, network, power, logging, security incl. password change, and a *Danger zone*).
+- **Notifications**: in-app inbox plus ntfy push for zone/program starts and stops, rain delay, sensors, weather errors and *controller unreachable / back online* alerts.
+- **More**: backup & restore (controller and app settings), multiple controllers, diagnostics.
 - **Light and dark** themes (or follow the system), installable-feeling phone layout with a bottom tab bar, keyboard- and screen-reader-friendly controls.
 
 ### Basic vs advanced
 
-Everyday controls live on the five tabs and at the top of each page. Installer and power-user options sit in **purple, dashed "Advanced" sections** (collapsed by default — turn on *Settings → App preferences → Show advanced options* to expand them everywhere). Anything destructive is **red, always confirmed**, and kept in a `⋯` menu or *Settings → Danger zone*. The full map is in [docs/redesign/information-architecture.md](docs/redesign/information-architecture.md).
+Everyday controls live on the five tabs and at the top of each page. Installer and power-user options sit in **purple, dashed "Advanced" sections** (collapsed by default: turn on *Settings → App preferences → Show advanced options* to expand them everywhere). Anything destructive is **red, always confirmed**, and kept in a `⋯` menu or *Settings → Danger zone*. The full map is in [docs/redesign/information-architecture.md](docs/redesign/information-architecture.md).
 
 ---
 
@@ -46,9 +46,9 @@ Everyday controls live on the five tabs and at the top of each page. Installer a
 
 ## Contributing
 
-- **Home cards** — to add a card to Home, follow **[Contributing Home cards](docs/contributing-widgets.md)**.
-- **Design** — the design system (tokens, shared components, basic/advanced/destructive rules) and the page map are in **[docs/redesign/](docs/redesign/)**; [feature-inventory.md](docs/redesign/feature-inventory.md) lists every feature and where it lives.
-- **Roadmap** — **[Roadmap requirements](docs/roadmap-requirements.md)** collects planning notes for larger features (goals, gaps, API/UX notes, draft acceptance criteria).
+- **Home cards**: to add a card to Home, follow **[Contributing Home cards](docs/contributing-widgets.md)**.
+- **Design**: the design system (tokens, shared components, basic/advanced/destructive rules) and the page map are in **[docs/redesign/](docs/redesign/)**; [feature-inventory.md](docs/redesign/feature-inventory.md) lists every feature and where it lives.
+- **Roadmap**: **[Roadmap requirements](docs/roadmap-requirements.md)** collects planning notes for larger features (goals, gaps, API/UX notes, draft acceptance criteria).
 
 Before opening a PR run `npm run lint` and `npx tsc --noEmit -p tsconfig.app.json`, and check your change on a phone-sized and a desktop window in light and dark mode.
 
@@ -151,7 +151,7 @@ To run **your own build** instead of the published image, use the [single-contai
 
 ## License
 
-HydroDash is available under two open-source licenses — choose the one that fits your use:
+HydroDash is available under two open-source licenses: choose the one that fits your use:
 
 - **[MIT License](LICENSE-MIT)**
 - **[Apache License 2.0](LICENSE-APACHE)**
